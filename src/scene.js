@@ -4,6 +4,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { GUI } from 'https://cdn.jsdelivr.net/npm/lil-gui@0.20/+esm'; 
 
 export function createScene() {
+  
   // Initial scene setup
   const gameWindow = document.getElementById('render-target');
   const scene = new THREE.Scene();
