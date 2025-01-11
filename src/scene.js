@@ -1,4 +1,8 @@
 import * as THREE from 'https://unpkg.com/three/build/three.module.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { GUI } from 'https://cdn.jsdelivr.net/npm/lil-gui@0.20/+esm'; 
+
 export function createScene() {
   // Initial scene setup
   const gameWindow = document.getElementById('render-target');
@@ -13,17 +17,21 @@ export function createScene() {
   const material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
   const mesh = new THREE.Mesh(geometry, material);
   scene.add(mesh);
+
   function draw() {
     mesh.rotation.x += 0.01;
     mesh.rotation.y += 0.01;
     renderer.render(scene, camera);
   }
+
   function start() {
     renderer.setAnimationLoop(draw);
   }
+
   function stop() {
     renderer.setAnimationLoop(null);
   }
+
   return {
     start,
     stop
