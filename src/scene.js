@@ -18,12 +18,25 @@ export function createScene() {
   renderer.setSize(gameWindow.offsetWidth, gameWindow.offsetHeight);
   gameWindow.appendChild(renderer.domElement);
   
-  const geometry = new THREE.BoxGeometry(1, 1, 1);
-  const material = new THREE.MeshLambertMaterial();
-  const mesh = new THREE.Mesh(geometry, material);
+  // Create the central cube
+const geometry = new THREE.BoxGeometry();
+const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+const cube = new THREE.Mesh(geometry, material);
+scene.add(cube);
 
-  scene.add(mesh);
+// Create four additional cubes at the corners of the central cube
+const positions = [
+  [4, 0, 4],  // Top-right corner
+  [-4, 0, 4], // Top-left corner
+  [4, 0, -4], // Bottom-right corner
+  [-4, 0, -4] // Bottom-left corner
+];
 
+positions.forEach(pos => {
+  const surroundingCube = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color: 0xff0000 }));
+  surroundingCube.position.set(...pos);
+  scene.add(surroundingCube);
+});
   setupLights();
   
   function setupLights() {
