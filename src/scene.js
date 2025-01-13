@@ -27,7 +27,7 @@ scene.add(cube);
 // Create four additional cubes at the corners of the central cube
 const positions = [
   [4, 0, 4],  // Top-right corner
-  //[-4, 0, 4], // Top-left corner
+  null, // Top-left corner
   [4, 0, -4], // Bottom-right corner
   [-4, 0, -4] // Bottom-left corner
 ];
@@ -36,6 +36,8 @@ const positions = [
 const metalModelPath = "./src/Island/Metal/metal.gltf";
 const gltfLoader = new GLTFLoader();
 
+
+//Load metal island
 gltfLoader.load(
   metalModelPath,
   (gltf) => {
@@ -52,14 +54,18 @@ gltfLoader.load(
 );
 
 const labelsNames = ["Wood", "Metal", "Rock", "Food"];
-const cornerCubes = positions.map((pos) => {
+const cornerCubes = [];
+
+//Create cubes
+positions.forEach((pos, index) => {
+  if (!pos) return; // Skip if null (reserved for "Metal")
   const surroundingCube = new THREE.Mesh(
     geometry,
     new THREE.MeshBasicMaterial({ color: 0xff0000 })
   );
   surroundingCube.position.set(...pos);
   scene.add(surroundingCube);
-  return surroundingCube;
+  cornerCubes[index] = surroundingCube;
 });
 
 setupLights();
@@ -99,11 +105,15 @@ function onDocumentMouseDown(event) {
   // Update the raycaster with the camera and mouse position
   raycaster.setFromCamera(mouse, camera.camera);
 
-  // Check for intersections with the corner cubes
-  const intersects = raycaster.intersectObjects(cornerCubes);
+  // Check for intersections with all objects
+  const intersects = raycaster.intersectObjects(cornerCubes, true); // Use true for recursive checks
   if (intersects.length > 0) {
-    const clickedCube = intersects[0].object;
-    const index = cornerCubes.indexOf(clickedCube);
+    const clickedObject = intersects[0].object;
+
+    // Find the index of the clicked object
+    const index = cornerCubes.findIndex(
+      (cube) => cube === clickedObject || cube.children.includes(clickedObject)
+    );
 
     if (index !== -1) {
       clickCounts[index]++;
@@ -111,6 +121,7 @@ function onDocumentMouseDown(event) {
     }
   }
 }
+
 
 gameWindow.addEventListener('mousedown', onDocumentMouseDown);
   
