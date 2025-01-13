@@ -18,113 +18,144 @@ export function createScene() {
   renderer.setSize(gameWindow.offsetWidth, gameWindow.offsetHeight);
   gameWindow.appendChild(renderer.domElement);
   
-  // Create the central cube
-const geometry = new THREE.BoxGeometry();
-const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-const cube = new THREE.Mesh(geometry, material);
-scene.add(cube);
 
-// Create four additional cubes at the corners of the central cube
-const positions = [
-  [4, 0, 4],  // Top-right corner
-  null, // Top-left corner
-  [4, 0, -4], // Bottom-right corner
-  [-4, 0, -4] // Bottom-left corner
-];
+  // Load the GLTF models
+  const models = [
+    { path: "./src/Island/metal/metal.gltf", position: [-4, 0, 4], scale: 0.3, name:"Metal" }, // Metal
+    { path: "./src/Island/forest/forest.gltf", position: [4, 0, -4], scale: 0.7,name:"Wood" }, // Forest
+    { path: "./src/Island/stone/stone.gltf", position: [-4, 0, -4], scale: 0.2, name: "Stone"}, // Stone
+    { path: "./src/Island/food/food.gltf", position: [4, 0, 4], scale: 0.3,name: "Food" }, // Food
+  ];
 
-// Load the GLTF model for "Metal"
-const metalModelPath = "./src/Island/Metal/metal.gltf";
-const gltfLoader = new GLTFLoader();
+  const gltfLoader = new GLTFLoader();
+  let centerModel = null;
+  const loadedModels = [];
+  const clickCounts = [0, 0, 0, 0];
+  
 
+  gltfLoader.load(
+    "./src/Island/center/center.gltf", // Replace with the correct path to your GLTF file
+    (gltf) => {
+      // Add the loaded model to the scene
+      const model = gltf.scene;
+      model.position.set(0.5, -0.5, 0.5); // Adjust position if needed
+      model.scale.set(0.7, 0.7, 0.7);
+      scene.add(model);
 
-//Load metal island
-gltfLoader.load(
-  metalModelPath,
-  (gltf) => {
-    const metalModel = gltf.scene;
-    metalModel.position.set(-4, 0, 4); // Position for "Metal" - Top-left corner
-    metalModel.scale.set(0.3, 0.3, 0.3); // Adjust scale as needed
-    scene.add(metalModel);
-    cornerCubes.splice(1, 0, metalModel); // Insert the model at the correct index
-  },
-  undefined,
-  (error) => {
-    console.error("Error loading GLTF model:", error);
-  }
-);
+      // Store reference to the center model
+      centerModel = model;
 
-const labelsNames = ["Wood", "Metal", "Rock", "Food"];
-const cornerCubes = [];
-
-//Create cubes
-positions.forEach((pos, index) => {
-  if (!pos) return; // Skip if null (reserved for "Metal")
-  const surroundingCube = new THREE.Mesh(
-    geometry,
-    new THREE.MeshBasicMaterial({ color: 0xff0000 })
+    },
+    (xhr) => {
+      // Called while loading is in progress
+      console.log((xhr.loaded / xhr.total) * 100 + '% loaded');
+    },
+    (error) => {
+      // Called if loading the model fails
+      console.error('An error occurred while loading the GLTF model', error);
+    }
   );
-  surroundingCube.position.set(...pos);
-  scene.add(surroundingCube);
-  cornerCubes[index] = surroundingCube;
-});
 
-setupLights();
+  // Load each model and add it to the scene at the specified position
+  models.forEach((model, index) => {
+    gltfLoader.load(
+      model.path,
+      (gltf) => {
+        const gltfModel = gltf.scene;
+        gltfModel.position.set(...model.position);
+        gltfModel.scale.set(model.scale, model.scale, model.scale); // Scale adjustment
+        scene.add(gltfModel);
 
-// Setup click counters and labels for each cube
-const clickCounts = [0, 0, 0, 0];
-const labelContainer = document.createElement('div');
-labelContainer.style.position = 'absolute';
-labelContainer.style.top = '10px';
-labelContainer.style.right = '10px';
-labelContainer.style.color = '#ffffff';
-labelContainer.style.fontFamily = 'Arial, sans-serif';
-labelContainer.style.fontSize = '14px';
-labelContainer.style.padding = '10px';
-labelContainer.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-labelContainer.style.borderRadius = '5px';
-labelContainer.style.userSelect = 'none';
-document.body.appendChild(labelContainer);
+         // Track the model with its index
+         loadedModels.push({ model: gltfModel, index });
 
-const labels = labelsNames.map((name, index) => {
-  const label = document.createElement('div');
-  label.textContent = `${name}: 0 clicks`;
-  label.style.marginBottom = '5px';
-  label.style.userSelect = 'none'; // Prevent text selection for individual labels
-  labelContainer.appendChild(label);
-  return label;
-});
-
-const raycaster = new THREE.Raycaster();
-const mouse = new THREE.Vector2();
-
-function onDocumentMouseDown(event) {
-  // Convert mouse position to normalized device coordinates (-1 to +1)
-  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-  // Update the raycaster with the camera and mouse position
-  raycaster.setFromCamera(mouse, camera.camera);
-
-  // Check for intersections with all objects
-  const intersects = raycaster.intersectObjects(cornerCubes, true); // Use true for recursive checks
-  if (intersects.length > 0) {
-    const clickedObject = intersects[0].object;
-
-    // Find the index of the clicked object
-    const index = cornerCubes.findIndex(
-      (cube) => cube === clickedObject || cube.children.includes(clickedObject)
+      },
+      undefined,
+      (error) => {
+        console.error("Error loading GLTF model:", error);
+      }
     );
+  });
 
-    if (index !== -1) {
-      clickCounts[index]++;
-      labels[index].textContent = `${labelsNames[index]}: ${clickCounts[index]} clicks`;
+// Create a container for the "Update" message for checking center update
+const updateMessage = document.createElement('div');
+updateMessage.style.position = 'absolute';
+updateMessage.style.top = '10px';
+updateMessage.style.left = '10px';
+updateMessage.style.color = '#ffffff';
+updateMessage.style.fontFamily = 'Arial, sans-serif';
+updateMessage.style.fontSize = '20px';
+updateMessage.style.padding = '5px';
+updateMessage.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+updateMessage.style.borderRadius = '5px';
+updateMessage.style.userSelect = 'none';
+updateMessage.style.display = 'none'; // Initially hidden
+updateMessage.textContent = 'Update';
+document.body.appendChild(updateMessage);
+
+
+
+  //Labels and click counters
+  //const labelsNames = ["Wood", "Metal", "Rock", "Food"];
+  const labelContainer = document.createElement('div');
+  labelContainer.style.position = 'absolute';
+  labelContainer.style.top = '10px';
+  labelContainer.style.right = '10px';
+  labelContainer.style.color = '#ffffff';
+  labelContainer.style.fontFamily = 'Arial, sans-serif';
+  labelContainer.style.fontSize = '14px';
+  labelContainer.style.padding = '10px';
+  labelContainer.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+  labelContainer.style.borderRadius = '5px';
+  labelContainer.style.userSelect = 'none';
+  document.body.appendChild(labelContainer);
+
+  const labels = models.map((model, index) => {
+    const label = document.createElement('div');
+    label.textContent = `${model.name}: 0 clicks`;
+    label.style.marginBottom = '5px';
+    label.style.userSelect = 'none';
+    labelContainer.appendChild(label);
+    return label;
+  });
+
+  setupLights();
+
+  const raycaster = new THREE.Raycaster();
+  const mouse = new THREE.Vector2();
+
+  function onDocumentMouseDown(event) {
+    // Convert mouse position to normalized device coordinates
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+    // Update the raycaster
+    raycaster.setFromCamera(mouse, camera.camera);
+
+    const intersects = raycaster.intersectObjects(loadedModels.map(item => item.model), true);
+
+    if (intersects.length > 0) {
+      // Find the clicked model
+      const intersected = intersects[0].object;
+      const clickedModel = loadedModels.find(item => {
+        let parent = intersected;
+        while (parent) {
+          if (item.model === parent) return true;
+          parent = parent.parent;
+        }
+        return false;
+      });
+
+      if (clickedModel) {
+        const index = clickedModel.index;
+        clickCounts[index]++;
+        labels[index].textContent = `${models[index].name}: ${clickCounts[index]} clicks`;
+      }
     }
   }
-}
 
+  gameWindow.addEventListener('mousedown', onDocumentMouseDown);
 
-gameWindow.addEventListener('mousedown', onDocumentMouseDown);
-  
   function setupLights() {
     const lights = [
       new THREE.AmbientLight(0xffffff, 0.2),
@@ -137,10 +168,9 @@ gameWindow.addEventListener('mousedown', onDocumentMouseDown);
     lights[3].position.set(0, 1, 1);
     scene.add(...lights);
   }
-  
+
   function draw() {
     renderer.render(scene, camera.camera);
-
   }
 
   function start() {
@@ -154,7 +184,7 @@ gameWindow.addEventListener('mousedown', onDocumentMouseDown);
   function onMouseDown(event) {
     camera.onMouseDown(event);
   }
-  
+
   function onMouseUp(event) {
     camera.onMouseUp(event);
   }
@@ -162,6 +192,7 @@ gameWindow.addEventListener('mousedown', onDocumentMouseDown);
   function onMouseMove(event) {
     camera.onMouseMove(event);
   }
+
   return {
     start,
     stop,
@@ -169,4 +200,4 @@ gameWindow.addEventListener('mousedown', onDocumentMouseDown);
     onMouseUp,
     onMouseMove
   }
-} 
+}
