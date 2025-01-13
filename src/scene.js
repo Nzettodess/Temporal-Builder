@@ -27,17 +27,92 @@ scene.add(cube);
 // Create four additional cubes at the corners of the central cube
 const positions = [
   [4, 0, 4],  // Top-right corner
-  [-4, 0, 4], // Top-left corner
+  //[-4, 0, 4], // Top-left corner
   [4, 0, -4], // Bottom-right corner
   [-4, 0, -4] // Bottom-left corner
 ];
 
-positions.forEach(pos => {
-  const surroundingCube = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color: 0xff0000 }));
+// Load the GLTF model for "Metal"
+const metalModelPath = "./src/Island/Metal/scene.gltf";
+const gltfLoader = new GLTFLoader();
+
+gltfLoader.load(
+  metalModelPath,
+  (gltf) => {
+    const metalModel = gltf.scene;
+    metalModel.position.set(-4, 0, 4); // Position for "Metal" - Top-left corner
+    metalModel.scale.set(0.05, 0.05, 0.05); // Adjust scale as needed
+    scene.add(metalModel);
+    cornerCubes.splice(1, 0, metalModel); // Insert the model at the correct index
+  },
+  undefined,
+  (error) => {
+    console.error("Error loading GLTF model:", error);
+  }
+);
+
+const labelsNames = ["Wood", "Metal", "Rock", "Food"];
+const cornerCubes = positions.map((pos) => {
+  const surroundingCube = new THREE.Mesh(
+    geometry,
+    new THREE.MeshBasicMaterial({ color: 0xff0000 })
+  );
   surroundingCube.position.set(...pos);
   scene.add(surroundingCube);
+  return surroundingCube;
 });
-  setupLights();
+
+setupLights();
+
+// Setup click counters and labels for each cube
+const clickCounts = [0, 0, 0, 0];
+const labelContainer = document.createElement('div');
+labelContainer.style.position = 'absolute';
+labelContainer.style.top = '10px';
+labelContainer.style.right = '10px';
+labelContainer.style.color = '#ffffff';
+labelContainer.style.fontFamily = 'Arial, sans-serif';
+labelContainer.style.fontSize = '14px';
+labelContainer.style.padding = '10px';
+labelContainer.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+labelContainer.style.borderRadius = '5px';
+labelContainer.style.userSelect = 'none';
+document.body.appendChild(labelContainer);
+
+const labels = labelsNames.map((name, index) => {
+  const label = document.createElement('div');
+  label.textContent = `${name}: 0 clicks`;
+  label.style.marginBottom = '5px';
+  label.style.userSelect = 'none'; // Prevent text selection for individual labels
+  labelContainer.appendChild(label);
+  return label;
+});
+
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+function onDocumentMouseDown(event) {
+  // Convert mouse position to normalized device coordinates (-1 to +1)
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+  // Update the raycaster with the camera and mouse position
+  raycaster.setFromCamera(mouse, camera.camera);
+
+  // Check for intersections with the corner cubes
+  const intersects = raycaster.intersectObjects(cornerCubes);
+  if (intersects.length > 0) {
+    const clickedCube = intersects[0].object;
+    const index = cornerCubes.indexOf(clickedCube);
+
+    if (index !== -1) {
+      clickCounts[index]++;
+      labels[index].textContent = `${labelsNames[index]}: ${clickCounts[index]} clicks`;
+    }
+  }
+}
+
+gameWindow.addEventListener('mousedown', onDocumentMouseDown);
   
   function setupLights() {
     const lights = [
@@ -83,4 +158,4 @@ positions.forEach(pos => {
     onMouseUp,
     onMouseMove
   }
-}
+} 

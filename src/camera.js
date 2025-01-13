@@ -14,8 +14,8 @@ export function createCamera(gameWindow) {
   const PAN_SENSITIVITY = -0.01;
   const Y_AXIS = new THREE.Vector3(0, 1, 0);
   const camera = new THREE.PerspectiveCamera(75, gameWindow.offsetWidth / gameWindow.offsetHeight, 0.1, 1000);
-  let cameraOrigin = new THREE.Vector3();
-  let cameraRadius = 4;  
+  let cameraOrigin = new THREE.Vector3(0,2,1); 
+  let cameraRadius = 10;  
   let cameraAzimuth = 45;
   let cameraElevation = 45;
   let isLeftMouseDown = false;
