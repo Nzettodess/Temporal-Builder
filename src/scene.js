@@ -33,7 +33,7 @@ const positions = [
 ];
 
 // Load the GLTF model for "Metal"
-const metalModelPath = "./src/Island/Metal/scene.gltf";
+const metalModelPath = "./src/Island/Metal/metal.gltf";
 const gltfLoader = new GLTFLoader();
 
 gltfLoader.load(
@@ -41,7 +41,7 @@ gltfLoader.load(
   (gltf) => {
     const metalModel = gltf.scene;
     metalModel.position.set(-4, 0, 4); // Position for "Metal" - Top-left corner
-    metalModel.scale.set(0.05, 0.05, 0.05); // Adjust scale as needed
+    metalModel.scale.set(0.3, 0.3, 0.3); // Adjust scale as needed
     scene.add(metalModel);
     cornerCubes.splice(1, 0, metalModel); // Insert the model at the correct index
   },
