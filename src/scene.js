@@ -86,6 +86,8 @@ export function createScene() {
     }
   );
 
+
+  const clockOcean = new THREE.Clock();
   // Load the ground model
   gltfLoader.load(
     "../public/Models/Ocean/ocean.glb", // Replace with the correct path to your ground GLTF file
@@ -95,7 +97,21 @@ export function createScene() {
       groundModel.scale.set(.2, .2, .2); // Adjust scale for the ground
       scene.add(groundModel);
 
-      //groundModel = model;
+      // Handle animations
+      const animationsOcean = gltf.animationsOcean;
+      if (animationsOcean && animationsOcean.length) {
+          const mixer = new THREE.AnimationMixer(groundModel);
+
+          // Add all animations to the mixer
+          animationsOcean.forEach((clip) => {
+              const action = mixer.clipAction(clip);
+              action.setLoop(THREE.LoopRepeat, Infinity); // Set the animation to loop
+              action.play(); // Start the animation
+          });
+
+          // Add the mixer to the update loop
+          scene.userData.mixer = mixer; // Store mixer to be updated
+      }
 
       console.log("Ground loaded successfully!");
     },
@@ -331,8 +347,16 @@ document.body.appendChild(updateMessage);
   
 
   function draw() {
+    if (scene.userData.mixer) {
+      const delta = clockOcean.getDelta();
+      scene.userData.mixer.update(delta);
+    }
+
     renderer.render(scene, camera.camera);
+    // requestAnimationFrame(draw);
   }
+
+  // draw();
 
   function start() {
     renderer.setAnimationLoop(draw);
