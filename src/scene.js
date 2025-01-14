@@ -2,6 +2,9 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { GUI } from 'https://cdn.jsdelivr.net/npm/lil-gui@0.20/+esm'; 
+import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+import { Scene, EquirectangularReflectionMapping, ACESFilmicToneMapping, WebGLRenderer } from 'three';
+import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
 
 import { createCamera } from './camera.js';
 
@@ -21,10 +24,10 @@ export function createScene() {
 
   // Load the GLTF models
   const models = [
-    { path: "./src/Island/metal/metal.gltf", position: [-4, 0, 4], scale: 0.3, name:"Metal" }, // Metal
-    { path: "./src/Island/forest/forest.gltf", position: [4, 0, -4], scale: 0.7,name:"Wood" }, // Forest
-    { path: "./src/Island/stone/stone.gltf", position: [-4, 0, -4], scale: 0.2, name: "Stone"}, // Stone
-    { path: "./src/Island/food/food.gltf", position: [4, 0, 4], scale: 0.3,name: "Food" }, // Food
+    { path: "../public/Models/Island/metal/metal.gltf", position: [-4, .4, 4], scale: 0.3, name:"Metal" }, // Metal
+    { path: "../public/Models/Island/forest/forest.gltf", position: [4, 1, -4], scale: 0.7,name:"Wood" }, // Forest
+    { path: "../public/Models/Island/stone/stone.gltf", position: [-4, 0, -4], scale: 0.2, name: "Stone"}, // Stone
+    { path: "../public/Models/Island/food/food.gltf", position: [4, 1, 4], scale: 0.3,name: "Food" }, // Food
   ];
 
   const gltfLoader = new GLTFLoader();
@@ -32,9 +35,36 @@ export function createScene() {
   const loadedModels = [];
   const clickCounts = [0, 0, 0, 0];
   
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = .5;
+  
+  function setupEnvironment() {
+    const exrLoader = new EXRLoader();
+    exrLoader.load(
+      '../public/Lighting/forest.exr', // Replace with the path to your .exr file
+      (texture) => {
+        texture.mapping = THREE.EquirectangularReflectionMapping; // Correct mapping for environment maps
+  
+        // Apply the texture as the environment map and background
+        scene.environment = texture;
+        scene.background = texture;
+  
+        console.log('EXR HDRI loaded successfully!');
+      },
+      (xhr) => {
+        console.log(`EXR HDRI loading: ${(xhr.loaded / xhr.total) * 100}% loaded`);
+      },
+      (error) => {
+        console.error('Error loading EXR HDRI:', error);
+      }
+    );
+  }
+  
+  // Call this function after setting up your scene and renderer
+  setupEnvironment();
 
   gltfLoader.load(
-    "./src/Island/center/center.gltf", // Replace with the correct path to your GLTF file
+    "../public/Models/Island/center/center.gltf", // Replace with the correct path to your GLTF file
     (gltf) => {
       // Add the loaded model to the scene
       const model = gltf.scene;
@@ -53,6 +83,29 @@ export function createScene() {
     (error) => {
       // Called if loading the model fails
       console.error('An error occurred while loading the GLTF model', error);
+    }
+  );
+
+  // Load the ground model
+  gltfLoader.load(
+    "../public/Models/Ocean/ocean.glb", // Replace with the correct path to your ground GLTF file
+    (gltf) => {
+      const groundModel = gltf.scene;
+      groundModel.position.set(0, 0.5, 0); // Center it at the origin (adjust Y if needed)
+      groundModel.scale.set(.2, .2, .2); // Adjust scale for the ground
+      scene.add(groundModel);
+
+      groundModel = model;
+
+      console.log("Ground loaded successfully!");
+    },
+    (xhr) => {
+      // Loading progress
+      console.log(`Ground model loading: ${(xhr.loaded / xhr.total) * 100}% loaded`);
+    },
+    (error) => {
+      // Loading error
+      console.error("Error loading ground model:", error);
     }
   );
 
@@ -163,11 +216,58 @@ document.body.appendChild(updateMessage);
       new THREE.DirectionalLight(0xffffff, 0.3),
       new THREE.DirectionalLight(0xffffff, 0.3)
     ];
+  
+    // Existing lights setup
     lights[1].position.set(0, 1, 0);
     lights[2].position.set(1, 1, 0);
     lights[3].position.set(0, 1, 1);
     scene.add(...lights);
+  
+    // Add a "sunlight" DirectionalLight
+    const sunlight = new THREE.DirectionalLight(0xffdd88, 1.5); // Warm color for sunlight
+    sunlight.castShadow = true; // Enable shadows
+    scene.add(sunlight);
+  
+    // Add a helper for the sunlight
+    //const sunHelper = new THREE.DirectionalLightHelper(sunlight, 2);
+    //scene.add(sunHelper);
+  
+    // Create a sun disc
+    const sunGeometry = new THREE.SphereGeometry(0.5, 16, 16);
+    const sunMaterial = new THREE.MeshBasicMaterial({ color: 0xffdd88, emissive: 0xffdd88 });
+    const sunDisc = new THREE.Mesh(sunGeometry, sunMaterial);
+    scene.add(sunDisc);
+  
+    // Create a pivot object for the sunlight
+    const sunPivot = new THREE.Object3D();
+    sunPivot.add(sunlight);
+    sunPivot.add(sunDisc);
+    scene.add(sunPivot);
+  
+    // Position the sun disc and light relative to the pivot
+    sunlight.position.set(0, 10, 0); // Set initial height
+    sunDisc.position.copy(sunlight.position);
+  
+    // Animation for east-to-west rotation (rotating around the Z-axis)
+    const sunRadius = 20; // Distance from the pivot
+    let angle = 0; // Start angle
+  
+    function animateSunlight() {
+      angle += 0.01; // Adjust speed of rotation
+      const x = sunRadius * Math.cos(angle); // East-to-west X position
+      const z = sunRadius * Math.sin(angle); // North-South Z position
+      sunlight.position.set(x, Math.sin(angle) * 10, z); // Adjust height for sunrise/sunset
+      sunDisc.position.copy(sunlight.position); // Sync the disc position
+      sunlight.target.position.set(0, 0, 0); // Ensure light points at the scene center
+      sunlight.target.updateMatrixWorld(); // Update target matrix
+  
+      requestAnimationFrame(animateSunlight);
+    }
+  
+    animateSunlight();
   }
+  
+  
 
   function draw() {
     renderer.render(scene, camera.camera);
