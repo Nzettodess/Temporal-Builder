@@ -36,12 +36,12 @@ export function createScene() {
   const clickCounts = [0, 0, 0, 0];
   
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = .5;
+  renderer.toneMappingExposure = .2;
   
   function setupEnvironment() {
     const exrLoader = new EXRLoader();
     exrLoader.load(
-      '../public/Lighting/forest.exr', // Replace with the path to your .exr file
+      '../public/Lighting/puresky.exr', // Replace with the path to your .exr file
       (texture) => {
         texture.mapping = THREE.EquirectangularReflectionMapping; // Correct mapping for environment maps
   
@@ -95,7 +95,7 @@ export function createScene() {
       groundModel.scale.set(.2, .2, .2); // Adjust scale for the ground
       scene.add(groundModel);
 
-      groundModel = model;
+      //groundModel = model;
 
       console.log("Ground loaded successfully!");
     },
@@ -224,47 +224,108 @@ document.body.appendChild(updateMessage);
     scene.add(...lights);
   
     // Add a "sunlight" DirectionalLight
-    const sunlight = new THREE.DirectionalLight(0xffdd88, 1.5); // Warm color for sunlight
+    const sunlight = new THREE.DirectionalLight(0xffdd88, 30.5); // Warm color for sunlight
+    sunlight.intensity = 45.5;
     sunlight.castShadow = true; // Enable shadows
     scene.add(sunlight);
+    
+    // Add a "moonlight" DirectionalLight
+    const moonlight = new THREE.DirectionalLight(0x8899ff, 30.0); // Cool color for moonlight
+    moonlight.castShadow = true; // Enable shadows
+    moonlight.intensity = 45.5;
+
+    scene.add(moonlight);
+
+    // Clock for animation
+    const clock = new THREE.Clock();
   
-    // Add a helper for the sunlight
-    //const sunHelper = new THREE.DirectionalLightHelper(sunlight, 2);
-    //scene.add(sunHelper);
+    // Function to calculate HDRI intensity based on sun's Z position
+    function calculateHDRIIntensity(sunPosition) {
+      const { y } = sunPosition; // Get the sun's Y position
+  
+      if (y <= 0) {
+          // Sun is below the horizon
+          return 0.01; // Minimum intensity for nighttime
+      }
+  
+      // Normalize the Y position relative to the max height (e.g., 10)
+      const maxHeight = 10;
+      const normalizedY = Math.max(Math.min(y / maxHeight, 1), 0); // Clamp between 0 and 1
+  
+      // Smooth intensity curve using a quadratic easing function
+      return 0.01 + (normalizedY ** 2) * 0.99; // Scale to a max intensity of 1
+  }
+
+    // Update HDRI intensity in the animation loop
+    function updateEnvironmentIntensity(sunLight, scene) {
+      const intensity = calculateHDRIIntensity(sunLight.position); // Calculate intensity
+      renderer.toneMappingExposure = intensity; // Adjust renderer exposure
+      if (scene.environment) {
+          scene.environment.intensity = intensity; // Optional: Adjust HDRI texture intensity
+      }
+  }
   
     // Create a sun disc
     const sunGeometry = new THREE.SphereGeometry(0.5, 16, 16);
-    const sunMaterial = new THREE.MeshBasicMaterial({ color: 0xffdd88, emissive: 0xffdd88 });
+    const sunMaterial = new THREE.MeshStandardMaterial({ color: 0xffdd88, emissive: 0xffdd88 });
+    sunMaterial.emissiveIntensity = 100;
     const sunDisc = new THREE.Mesh(sunGeometry, sunMaterial);
     scene.add(sunDisc);
-  
+
+    // Create a moon disc
+    const moonGeometry = new THREE.SphereGeometry(0.4, 16, 16);
+    const moonMaterial = new THREE.MeshStandardMaterial({ color: 0x8899ff, emissive: 0x8899ff });
+    moonMaterial.emissiveIntensity = 100;
+    const moonDisc = new THREE.Mesh(moonGeometry, moonMaterial);
+    scene.add(moonDisc);
+
     // Create a pivot object for the sunlight
     const sunPivot = new THREE.Object3D();
     sunPivot.add(sunlight);
     sunPivot.add(sunDisc);
     scene.add(sunPivot);
+
+    const moonPivot = new THREE.Object3D();
+    moonPivot.add(moonlight);
+    moonPivot.add(moonDisc);
+    scene.add(moonPivot);
   
     // Position the sun disc and light relative to the pivot
     sunlight.position.set(0, 10, 0); // Set initial height
     sunDisc.position.copy(sunlight.position);
+
+    // Position the moon disc and light relative to the pivot
+    moonlight.position.set(0, -10, 0); // Set initial height (opposite to the sun)
+    moonDisc.position.copy(moonlight.position);
   
     // Animation for east-to-west rotation (rotating around the Z-axis)
     const sunRadius = 20; // Distance from the pivot
     let angle = 0; // Start angle
   
-    function animateSunlight() {
-      angle += 0.01; // Adjust speed of rotation
-      const x = sunRadius * Math.cos(angle); // East-to-west X position
-      const z = sunRadius * Math.sin(angle); // North-South Z position
-      sunlight.position.set(x, Math.sin(angle) * 10, z); // Adjust height for sunrise/sunset
-      sunDisc.position.copy(sunlight.position); // Sync the disc position
-      sunlight.target.position.set(0, 0, 0); // Ensure light points at the scene center
-      sunlight.target.updateMatrixWorld(); // Update target matrix
+    function animateSunAndMoon() {
+      angle += 0.001; // Adjust rotation speed
+      const sunX = sunRadius * Math.cos(angle);
+      const sunZ = sunRadius * Math.sin(angle);
+      const sunY = Math.sin(angle) * 10; // Adjust for height
   
-      requestAnimationFrame(animateSunlight);
-    }
+      // Update Sun Position
+      sunlight.position.set(sunX, sunY, sunZ);
+      sunDisc.position.copy(sunlight.position);
   
-    animateSunlight();
+      // Update Moon Position (opposite to the sun)
+      const moonX = -sunX;
+      const moonZ = -sunZ;
+      const moonY = -sunY;
+      moonlight.position.set(moonX, moonY, moonZ);
+      moonDisc.position.copy(moonlight.position);
+  
+      // Adjust intensity based on the sun's height
+      updateEnvironmentIntensity(sunlight, scene);
+  
+      requestAnimationFrame(animateSunAndMoon);
+  }
+  
+    animateSunAndMoon();
   }
   
   
