@@ -98,6 +98,7 @@ export function createScene() {
     "../public/Models/Time Machine/Time Machine 100.gltf",
   ];
 
+  const versionCosts = [0, 0, 0, 0, 0]; // Costs for versions: 0, 25, 50, 75, 100
   let currentVersionIndex = 0; // Track the current version
   let timeMachineModel = null; // Reference to the currently displayed model
 
@@ -194,17 +195,16 @@ export function createScene() {
 
 // Load the time machine model
 function loadTimeMachineModel(versionIndex) {
-  // Unload the current model if it exists
   if (timeMachineModel) {
-    scene.remove(timeMachineModel);
+    scene.remove(timeMachineModel); // Unload the current model if it exists
   }
 
   gltfLoader.load(
     timeMachineModels[versionIndex],
     (glb) => {
       timeMachineModel = glb.scene;
-      timeMachineModel.position.set(0.5, 1, 0.3);
-      timeMachineModel.scale.set(0.04, 0.04, 0.04);
+      timeMachineModel.position.set(0.5, 1, 0.5);
+      timeMachineModel.scale.set(0.02, 0.02, 0.02);
       scene.add(timeMachineModel);
 
       console.log(`Time Machine version ${versionIndex * 25} loaded successfully!`);
@@ -228,6 +228,31 @@ function loadTimeMachineModel(versionIndex) {
 }
 // Load the initial model
 loadTimeMachineModel(currentVersionIndex);
+
+function attemptUpgrade() {
+  const nextVersionIndex = currentVersionIndex + 1;
+
+  if (nextVersionIndex >= timeMachineModels.length) {
+    console.log("Maximum version reached. No further upgrades.");
+    return;
+  }
+
+  const requiredCost = versionCosts[nextVersionIndex];
+  const hasEnoughClicks = clickCounts.every((count) => count >= requiredCost);
+
+  if (hasEnoughClicks) {
+    // Deduct the required cost from all click counters
+    clickCounts = clickCounts.map((count) => count - requiredCost);
+
+    // Load the next version of the Time Machine
+    currentVersionIndex = nextVersionIndex;
+    loadTimeMachineModel(currentVersionIndex);
+  } else {
+    console.log(
+      `Not enough clicks to upgrade. Version ${nextVersionIndex * 25} requires ${requiredCost} clicks on each object.`
+    );
+  }
+}
 
 function showWinMessage() {
   // Create a div element for the "You Won" message
@@ -382,23 +407,34 @@ function onDocumentMouseDown(event) {
       let parent = intersected;
       while (parent) {
         if (timeMachineModel === parent) {
-          // Check if all indices 0-3 have at least 10 clicks
-          const canUpgrade = clickCounts.slice(0, 4).every(count => count >= 10);
-
+          // Define costs for each version of the Time Machine
+          const upgradeCosts = [10, 20, 30, 40, 50]; // Adjust these costs as needed for each version
+    
+          // Get the cost for the current upgrade
+          const currentCost = upgradeCosts[currentVersionIndex];
+    
+          // Check if all indices 0-3 have at least the required clicks for the current version
+          const canUpgrade = clickCounts.slice(0, 4).every(count => count >= currentCost);
+    
           if (canUpgrade) {
-            // Deduct 10 from the click counts of indices 0-3
+            // Deduct the required cost from the click counts of indices 0-3
             for (let i = 0; i < 4; i++) {
-              clickCounts[i] -= 10;
+              clickCounts[i] -= currentCost;
               labels[i].textContent = `${models[i].name}: ${clickCounts[i]} Kilograms`;
             }
-
+    
             // Increment the version index and wrap around if it exceeds the array length
             currentVersionIndex = (currentVersionIndex + 1) % timeMachineModels.length;
-
+    
             // Load the next version of the model
             loadTimeMachineModel(currentVersionIndex);
+    
+            // Check if the last version is loaded and display the win message
+            if (currentVersionIndex === timeMachineModels.length - 1) {
+              showWinMessage();
+            }
           } else {
-            console.log("Not enough resources to upgrade the Time Machine.");
+            console.log(`Not enough resources to upgrade the Time Machine. Current cost: ${currentCost}`);
           }
           break;
         }
