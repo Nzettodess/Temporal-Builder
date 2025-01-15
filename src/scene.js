@@ -24,15 +24,74 @@ export function createScene() {
 
   // Load the GLTF models
   const models = [
-    { path: "../public/Models/Island/metal/metal.gltf", position: [-4, .4, 4], scale: 0.3, name:"Metal" }, // Metal
-    { path: "../public/Models/Island/forest/forest.gltf", position: [4, 1, -4], scale: 0.7,name:"Wood" }, // Forest
-    { path: "../public/Models/Island/stone/stone.gltf", position: [-4, 0, -4], scale: 0.2, name: "Stone"}, // Stone
-    { path: "../public/Models/Island/food/food.gltf", position: [4, 1, 4], scale: 0.3,name: "Food" }, // Food
+    { path: "../public/Models/Island/metal/metal.gltf", position: [-6, .2, 6], scale: 1, name:"Metal" }, // Metal
+    { path: "../public/Models/Island/forest/forest.gltf", position: [6, 1, -6], scale: 1.5,name:"Wood" }, // Forest
+    { path: "../public/Models/Island/stone/stone.gltf", position: [-6, 0, -6], scale: .3, name: "Stone"}, // Stone
+    { path: "../public/Models/Island/food/food.gltf", position: [6, 2, 6], scale: 1,name: "Food" }, // Food
+  ];
+
+  const decomodels = [
+    { path: "../public/Models/Moutain/Moutain0.gltf", position: [-17, .4, 17], scale: 2, name:"deco" }, 
+    { path: "../public/Models/Moutain/Moutain0.gltf", position: [-21, .4, 10], scale: 2, name:"deco" }, 
+    { path: "../public/Models/Moutain/Moutain0.gltf", position: [-20, .4, 5], scale: 2, name:"deco" }, 
+    { path: "../public/Models/Moutain/Moutain0.gltf", position: [-18, .4, 0], scale: 2, name:"deco" }, 
+    { path: "../public/Models/Moutain/Moutain0.gltf", position: [-22, .4, -5], scale: 2, name:"deco" }, 
+    { path: "../public/Models/Moutain/Moutain0.gltf", position: [-17, .4, -12], scale: 2, name:"deco" }, 
+
+    { path: "../public/Models/Moutain/Moutain1.gltf", position: [-17-5, .4, 17], scale: 1,name:"deco" }, 
+    { path: "../public/Models/Moutain/Moutain1.gltf", position: [-21-2, .4, 10], scale: 1,name:"deco" }, 
+    { path: "../public/Models/Moutain/Moutain1.gltf", position: [-20-3, .4, 5], scale: 1,name:"deco" }, 
+    { path: "../public/Models/Moutain/Moutain1.gltf", position: [-18-5, .4, 0], scale: 1,name:"deco" }, 
+    { path: "../public/Models/Moutain/Moutain1.gltf", position: [-22-6, .4, -5], scale: 1,name:"deco" }, 
+    { path: "../public/Models/Moutain/Moutain1.gltf", position: [-17-2, .4, -12], scale: 1,name:"deco" }, 
+
+    { path: "../public/Models/Moutain/Moutain0.gltf", position: [10+2, .4, 17], scale: 2, name:"deco" }, 
+    { path: "../public/Models/Moutain/Moutain0.gltf", position: [10+4, .4, 10], scale: 2, name:"deco" }, 
+    { path: "../public/Models/Moutain/Moutain0.gltf", position: [10+6, .4, 5], scale: 2, name:"deco" }, 
+    { path: "../public/Models/Moutain/Moutain0.gltf", position: [10+3, .4, 0], scale: 2, name:"deco" }, 
+    { path: "../public/Models/Moutain/Moutain0.gltf", position: [10+5, .4, -5], scale: 2, name:"deco" }, 
+    { path: "../public/Models/Moutain/Moutain0.gltf", position: [8+2, .4, -12], scale: 2, name:"deco" }, 
+
+    { path: "../public/Models/Moutain/Moutain1.gltf", position: [8+2+4, .4, 17], scale: 1,name:"deco" }, 
+    { path: "../public/Models/Moutain/Moutain1.gltf", position: [8+2+6, .4, 10], scale: 1,name:"deco" }, 
+    { path: "../public/Models/Moutain/Moutain1.gltf", position: [10+2+3, .4, 5], scale: 1,name:"deco" }, 
+    { path: "../public/Models/Moutain/Moutain1.gltf", position: [8+2+8, .4, 0], scale: 1,name:"deco" }, 
+    { path: "../public/Models/Moutain/Moutain1.gltf", position: [10+2+6, .4, -5], scale: 1,name:"deco" }, 
+    { path: "../public/Models/Moutain/Moutain1.gltf", position: [8+2+3, .4, -12], scale: 1,name:"deco" }, 
+
+    { path: "../public/Models/Moutain/Moutain0.gltf", position: [-17, .4, 17], scale: 2, name:"deco" }, 
+    { path: "../public/Models/Moutain/Moutain0.gltf", position: [-9, .4, 20+2], scale: 2, name:"deco" }, 
+    { path: "../public/Models/Moutain/Moutain0.gltf", position: [0, .4, 20+3], scale: 2, name:"deco" }, 
+    { path: "../public/Models/Moutain/Moutain0.gltf", position: [10, .4, 20+2], scale: 2, name:"deco" }, 
+
+    { path: "../public/Models/Moutain/Moutain1.gltf", position: [-17, .4, 20+5], scale: 1,name:"deco" }, 
+    { path: "../public/Models/Moutain/Moutain1.gltf", position: [-9, .4, 20+3], scale: 1,name:"deco" }, 
+    { path: "../public/Models/Moutain/Moutain1.gltf", position: [0, .4, 20+5], scale: 1,name:"deco" }, 
+    { path: "../public/Models/Moutain/Moutain1.gltf", position: [10, .4, 20+2], scale: 1,name:"deco" }, 
+    { path: "../public/Models/Moutain/Moutain1.gltf", position: [5, .4, 20+3], scale: 1,name:"deco" }, 
+    { path: "../public/Models/Moutain/Moutain1.gltf", position: [-5, .4, 20+1], scale: 1,name:"deco" }, 
+
+    { path: "../public/Models/Moutain/Moutain0.gltf", position: [-17, .4, -17], scale: 2, name:"deco" }, 
+    { path: "../public/Models/Moutain/Moutain0.gltf", position: [-9, .4, -20+2], scale: 2, name:"deco" }, 
+    { path: "../public/Models/Moutain/Moutain0.gltf", position: [0, .4, -20+3], scale: 2, name:"deco" }, 
+    { path: "../public/Models/Moutain/Moutain0.gltf", position: [10, .4, -20+2], scale: 2, name:"deco" }, 
+
+    { path: "../public/Models/Moutain/Moutain1.gltf", position: [-17, .4, -20+5], scale: 1,name:"deco" }, 
+    { path: "../public/Models/Moutain/Moutain1.gltf", position: [-9, .4, -20+3], scale: 1,name:"deco" }, 
+    { path: "../public/Models/Moutain/Moutain1.gltf", position: [0, .4, -20+5], scale: 1,name:"deco" }, 
+    { path: "../public/Models/Moutain/Moutain1.gltf", position: [10, .4, -20+2], scale: 1,name:"deco" }, 
+    { path: "../public/Models/Moutain/Moutain1.gltf", position: [5, .4, -20+3], scale: 1,name:"deco" }, 
+    { path: "../public/Models/Moutain/Moutain1.gltf", position: [-5, .4, -20+1], scale: 1,name:"deco" }, 
+
+    
+
+    
   ];
 
   const gltfLoader = new GLTFLoader();
   let centerModel = null;
   const loadedModels = [];
+  const loadedDecoModels = [];
   const clickCounts = [0, 0, 0, 0];
   
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -92,7 +151,7 @@ export function createScene() {
   gltfLoader.load("../public/Models/Ocean/ocean.gltf", function(glb) {
       const groundModel = glb.scene;
       groundModel.position.set(0, 0.1, 0); // Center it at the origin (adjust Y if needed)
-      groundModel.scale.set(1, 1, 1); // Adjust scale for the ground
+      groundModel.scale.set(1.5, 1, 1.5); // Adjust scale for the ground
       scene.add(groundModel);
 
       // Handle animations
@@ -140,6 +199,26 @@ export function createScene() {
     );
   });
 
+  decomodels.forEach((decomodels, index) => {
+    gltfLoader.load(
+      decomodels.path,
+      (gltf) => {
+        const gltfModel = gltf.scene;
+        gltfModel.position.set(...decomodels.position);
+        gltfModel.scale.set(decomodels.scale, decomodels.scale, decomodels.scale); // Scale adjustment
+        scene.add(gltfModel);
+
+         // Track the model with its index
+         loadedDecoModels.push({ model: gltfModel, index });
+
+      },
+      undefined,
+      (error) => {
+        console.error("Error loading GLTF model:", error);
+      }
+    );
+  });
+
 // Create a container for the "Update" message for checking center update
 const updateMessage = document.createElement('div');
 updateMessage.style.position = 'absolute';
@@ -175,7 +254,7 @@ document.body.appendChild(updateMessage);
 
   const labels = models.map((model, index) => {
     const label = document.createElement('div');
-    label.textContent = `${model.name}: 0 clicks`;
+    label.textContent = `${model.name}: 0 Kilograms`;
     label.style.marginBottom = '5px';
     label.style.userSelect = 'none';
     labelContainer.appendChild(label);
@@ -212,7 +291,7 @@ document.body.appendChild(updateMessage);
       if (clickedModel) {
         const index = clickedModel.index;
         clickCounts[index]++;
-        labels[index].textContent = `${models[index].name}: ${clickCounts[index]} clicks`;
+        labels[index].textContent = `${models[index].name}: ${clickCounts[index]} Kilograms`;
       }
     }
   }
