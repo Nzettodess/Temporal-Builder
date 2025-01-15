@@ -89,6 +89,19 @@ export function createScene() {
     
   ];
 
+  //time machine
+  const timeMachineModels = [
+    "../public/Models/Time Machine/Time Machine 0.gltf",
+    "../public/Models/Time Machine/Time Machine 25.gltf",
+    "../public/Models/Time Machine/Time Machine 50.gltf",
+    "../public/Models/Time Machine/Time Machine 75.gltf",
+    "../public/Models/Time Machine/Time Machine 100.gltf",
+  ];
+
+  let currentVersionIndex = 0; // Track the current version
+  let timeMachineModel = null; // Reference to the currently displayed model
+
+
   const gltfLoader = new GLTFLoader();
   let centerModel = null;
   const loadedModels = [];
@@ -177,7 +190,69 @@ export function createScene() {
       // Loading error
       console.error("Error loading ground model:", error);
     }
+  );  
+
+// Load the time machine model
+function loadTimeMachineModel(versionIndex) {
+  // Unload the current model if it exists
+  if (timeMachineModel) {
+    scene.remove(timeMachineModel);
+  }
+
+  gltfLoader.load(
+    timeMachineModels[versionIndex],
+    (glb) => {
+      timeMachineModel = glb.scene;
+      timeMachineModel.position.set(0.5, 1, 0.3);
+      timeMachineModel.scale.set(0.04, 0.04, 0.04);
+      scene.add(timeMachineModel);
+
+      console.log(`Time Machine version ${versionIndex * 25} loaded successfully!`);
+
+      // Check if the Time Machine 100 is loaded
+      if (versionIndex === timeMachineModels.length - 1) {
+        showWinMessage();
+      }
+    },
+    (xhr) => {
+      console.log(
+        `Time Machine model version ${
+          versionIndex * 25
+        } loading: ${(xhr.loaded / xhr.total) * 100}% loaded`
+      );
+    },
+    (error) => {
+      console.error(`Error loading Time Machine model version ${versionIndex * 25}:`, error);
+    }
   );
+}
+// Load the initial model
+loadTimeMachineModel(currentVersionIndex);
+
+function showWinMessage() {
+  // Create a div element for the "You Won" message
+  const winMessage = document.createElement("div");
+  winMessage.textContent = "You Won!";
+  winMessage.style.position = "absolute";
+  winMessage.style.top = "50%";
+  winMessage.style.left = "50%";
+  winMessage.style.transform = "translate(-50%, -50%)";
+  winMessage.style.padding = "20px";
+  winMessage.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
+  winMessage.style.color = "white";
+  winMessage.style.fontSize = "2rem";
+  winMessage.style.fontWeight = "bold";
+  winMessage.style.borderRadius = "10px";
+  winMessage.style.zIndex = "1000";
+
+  // Append the message to the document body
+  document.body.appendChild(winMessage);
+
+  // Optionally, remove the message after a few seconds
+  setTimeout(() => {
+    winMessage.remove();
+  }, 5000);
+}
 
   //clickable island
   models.forEach((model, index) => {
@@ -265,40 +340,80 @@ document.body.appendChild(updateMessage);
   setupLights();
 
   const raycaster = new THREE.Raycaster();
-  const mouse = new THREE.Vector2();
+const mouse = new THREE.Vector2();
 
-  function onDocumentMouseDown(event) {
-    // Convert mouse position to normalized device coordinates
-    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+function onDocumentMouseDown(event) {
+  // Convert mouse position to normalized device coordinates
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
-    // Update the raycaster
-    raycaster.setFromCamera(mouse, camera.camera);
+  // Update the raycaster
+  raycaster.setFromCamera(mouse, camera.camera);
 
-    const intersects = raycaster.intersectObjects(loadedModels.map(item => item.model), true);
+  // Check for intersections with loaded models and the time machine model
+  const intersects = raycaster.intersectObjects(
+    [...loadedModels.map(item => item.model), timeMachineModel].filter(Boolean),
+    true
+  );
 
-    if (intersects.length > 0) {
-      // Find the clicked model
-      const intersected = intersects[0].object;
-      const clickedModel = loadedModels.find(item => {
-        let parent = intersected;
-        while (parent) {
-          if (item.model === parent) return true;
-          parent = parent.parent;
+  if (intersects.length > 0) {
+    const intersected = intersects[0].object;
+
+    // Check if the intersected object is part of a loaded model
+    const clickedModel = loadedModels.find(item => {
+      let parent = intersected;
+      while (parent) {
+        if (item.model === parent) return true;
+        parent = parent.parent;
+      }
+      return false;
+    });
+
+    if (clickedModel) {
+      // Handle click on loaded models
+      const index = clickedModel.index;
+      clickCounts[index]++;
+      labels[index].textContent = `${models[index].name}: ${clickCounts[index]} Kilograms`;
+      return; // Exit early if a loaded model was clicked
+    }
+
+    // Handle click on the Time Machine model
+    if (timeMachineModel) {
+      let parent = intersected;
+      while (parent) {
+        if (timeMachineModel === parent) {
+          // Check if all indices 0-3 have at least 10 clicks
+          const canUpgrade = clickCounts.slice(0, 4).every(count => count >= 10);
+
+          if (canUpgrade) {
+            // Deduct 10 from the click counts of indices 0-3
+            for (let i = 0; i < 4; i++) {
+              clickCounts[i] -= 10;
+              labels[i].textContent = `${models[i].name}: ${clickCounts[i]} Kilograms`;
+            }
+
+            // Increment the version index and wrap around if it exceeds the array length
+            currentVersionIndex = (currentVersionIndex + 1) % timeMachineModels.length;
+
+            // Load the next version of the model
+            loadTimeMachineModel(currentVersionIndex);
+          } else {
+            console.log("Not enough resources to upgrade the Time Machine.");
+          }
+          break;
         }
-        return false;
-      });
-
-      if (clickedModel) {
-        const index = clickedModel.index;
-        clickCounts[index]++;
-        labels[index].textContent = `${models[index].name}: ${clickCounts[index]} Kilograms`;
+        parent = parent.parent;
       }
     }
   }
+}
 
-  gameWindow.addEventListener('mousedown', onDocumentMouseDown);
+// Attach the combined event listener
+gameWindow.addEventListener("mousedown", onDocumentMouseDown);
 
+  
+  // Attach the combined event listener
+  gameWindow.addEventListener("mousedown", onDocumentMouseDown);
   function setupLights() {
     const lights = [
       new THREE.AmbientLight(0xffffff, 0.2),
@@ -335,7 +450,7 @@ document.body.appendChild(updateMessage);
   
       if (y <= 0) {
           // Sun is below the horizon
-          return 0.05; // Minimum intensity for nighttime
+          return 0.01; // Minimum intensity for nighttime
       }
   
       // Normalize the Y position relative to the max height (e.g., 10)
