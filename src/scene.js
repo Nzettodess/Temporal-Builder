@@ -22,14 +22,15 @@ export function createScene() {
   gameWindow.appendChild(renderer.domElement);
   
 
-  // Load the GLTF models
+  //island
   const models = [
     { path: "../public/Models/Island/metal/metal.gltf", position: [-6, .2, 6], scale: 1, name:"Metal" }, // Metal
     { path: "../public/Models/Island/forest/forest.gltf", position: [6, 1, -6], scale: 1.5,name:"Wood" }, // Forest
     { path: "../public/Models/Island/stone/stone.gltf", position: [-6, 0, -6], scale: .3, name: "Stone"}, // Stone
     { path: "../public/Models/Island/food/food.gltf", position: [6, 2, 6], scale: 1,name: "Food" }, // Food
   ];
-
+  
+  //moutain
   const decomodels = [
     { path: "../public/Models/Moutain/Moutain0.gltf", position: [-17, .4, 17], scale: 2, name:"deco" }, 
     { path: "../public/Models/Moutain/Moutain0.gltf", position: [-21, .4, 10], scale: 2, name:"deco" }, 
@@ -97,6 +98,7 @@ export function createScene() {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = .2;
   
+  //hdri
   function setupEnvironment() {
     const exrLoader = new EXRLoader();
     exrLoader.load(
@@ -118,7 +120,6 @@ export function createScene() {
       }
     );
   }
-  
   // Call this function after setting up your scene and renderer
   setupEnvironment();
 
@@ -147,7 +148,7 @@ export function createScene() {
 
 
   const clockOcean = new THREE.Clock();
-  // Load the ground model
+  // Load the OCean model
   gltfLoader.load("../public/Models/Ocean/ocean.gltf", function(glb) {
       const groundModel = glb.scene;
       groundModel.position.set(0, 0.1, 0); // Center it at the origin (adjust Y if needed)
@@ -178,7 +179,7 @@ export function createScene() {
     }
   );
 
-  // Load each model and add it to the scene at the specified position
+  //clickable island
   models.forEach((model, index) => {
     gltfLoader.load(
       model.path,
@@ -198,7 +199,7 @@ export function createScene() {
       }
     );
   });
-
+  //deco moutain
   decomodels.forEach((decomodels, index) => {
     gltfLoader.load(
       decomodels.path,
