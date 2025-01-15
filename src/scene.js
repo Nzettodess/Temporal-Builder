@@ -408,7 +408,7 @@ function onDocumentMouseDown(event) {
       while (parent) {
         if (timeMachineModel === parent) {
           // Define costs for each version of the Time Machine
-          const upgradeCosts = [10, 20, 30, 40, 50]; // Adjust these costs as needed for each version
+          const upgradeCosts = [10, 20, 30, 40, 5000]; // Adjust these costs as needed for each version
     
           // Get the cost for the current upgrade
           const currentCost = upgradeCosts[currentVersionIndex];
