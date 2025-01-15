@@ -68,7 +68,7 @@ export function createScene() {
     (gltf) => {
       // Add the loaded model to the scene
       const model = gltf.scene;
-      model.position.set(0.5, -0.5, 0.5); // Adjust position if needed
+      model.position.set(0.5, 0.1, 0.5); // Adjust position if needed
       model.scale.set(0.7, 0.7, 0.7);
       scene.add(model);
 
@@ -89,29 +89,23 @@ export function createScene() {
 
   const clockOcean = new THREE.Clock();
   // Load the ground model
-  gltfLoader.load(
-    "../public/Models/Ocean/ocean.glb", // Replace with the correct path to your ground GLTF file
-    (gltf) => {
-      const groundModel = gltf.scene;
-      groundModel.position.set(0, 0.5, 0); // Center it at the origin (adjust Y if needed)
-      groundModel.scale.set(.2, .2, .2); // Adjust scale for the ground
+  gltfLoader.load("../public/Models/Ocean/ocean.gltf", function(glb) {
+      const groundModel = glb.scene;
+      groundModel.position.set(0, 0.1, 0); // Center it at the origin (adjust Y if needed)
+      groundModel.scale.set(1, 1, 1); // Adjust scale for the ground
       scene.add(groundModel);
 
       // Handle animations
-      const animationsOcean = gltf.animationsOcean;
-      if (animationsOcean && animationsOcean.length) {
-          const mixer = new THREE.AnimationMixer(groundModel);
+      const oceanClips = glb.animations;
 
-          // Add all animations to the mixer
-          animationsOcean.forEach((clip) => {
-              const action = mixer.clipAction(clip);
-              action.setLoop(THREE.LoopRepeat, Infinity); // Set the animation to loop
-              action.play(); // Start the animation
-          });
+          const mixer = new THREE.AnimationMixer(groundModel); 
+          const clipOcean = THREE.AnimationClip.findByName(oceanClips, 'KeyAction');
 
+          const action = mixer.clipAction(clipOcean);
+          action.play(); // Start the animation
           // Add the mixer to the update loop
           scene.userData.mixer = mixer; // Store mixer to be updated
-      }
+      
 
       console.log("Ground loaded successfully!");
     },
@@ -241,14 +235,14 @@ document.body.appendChild(updateMessage);
   
     // Add a "sunlight" DirectionalLight
     const sunlight = new THREE.DirectionalLight(0xffdd88, 30.5); // Warm color for sunlight
-    sunlight.intensity = 45.5;
+    sunlight.intensity = 50.0;
     sunlight.castShadow = true; // Enable shadows
     scene.add(sunlight);
     
     // Add a "moonlight" DirectionalLight
     const moonlight = new THREE.DirectionalLight(0x8899ff, 30.0); // Cool color for moonlight
     moonlight.castShadow = true; // Enable shadows
-    moonlight.intensity = 45.5;
+    moonlight.intensity = 150.0;
 
     scene.add(moonlight);
 
@@ -261,7 +255,7 @@ document.body.appendChild(updateMessage);
   
       if (y <= 0) {
           // Sun is below the horizon
-          return 0.01; // Minimum intensity for nighttime
+          return 0.05; // Minimum intensity for nighttime
       }
   
       // Normalize the Y position relative to the max height (e.g., 10)
@@ -353,7 +347,7 @@ document.body.appendChild(updateMessage);
     }
 
     renderer.render(scene, camera.camera);
-    // requestAnimationFrame(draw);
+    //requestAnimationFrame(draw);
   }
 
   // draw();
