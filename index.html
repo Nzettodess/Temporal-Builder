@@ -157,6 +157,27 @@
         MMbackgroundMusic: new Audio('./public/Audio/Music/Main Menu Song.mp3'),
         MMbuttonClick: new Audio('./public/Audio/SFX/click.mp3'),
       };
+      
+      // Create a cutscene video element
+      const cutsceneVideo = document.createElement('video');
+      cutsceneVideo.id = 'cutscene-video';
+      cutsceneVideo.src = './public/Video/cutscene1.mp4'; // Replace with your video path
+      cutsceneVideo.style.position = 'absolute';
+      cutsceneVideo.style.top = '0';
+      cutsceneVideo.style.left = '0';
+      cutsceneVideo.style.width = '100%';
+      cutsceneVideo.style.height = '100%';
+      cutsceneVideo.style.objectFit = 'cover';
+      cutsceneVideo.style.zIndex = '100';
+      cutsceneVideo.style.display = 'none'; // Hide initially
+      cutsceneVideo.autoplay = false;
+      cutsceneVideo.controls = false;
+      cutsceneVideo.muted = false;
+
+      // Append the video to the document body
+      document.body.appendChild(cutsceneVideo);
+           
+      // gameAudiosounds.GAbackgroundMusic.volume = 
 
       let scene;
 
@@ -170,6 +191,20 @@
         mainMenusounds.MMbackgroundMusic.pause();
         videoBackground.pause();
         videoBackground.style.display = 'none';
+        // Show and play the cutscene
+        cutsceneVideo.style.display = 'block';
+        cutsceneVideo.play();
+        displaySceneText(`You are travelling through time, but suddenly your time machine is broken!`);
+
+      });
+
+      // Handle cutscene end event
+      cutsceneVideo.addEventListener('ended', () => {
+        console.log('Cutscene ended. Loading scene.js...');
+        
+        // Hide the video element
+        cutsceneVideo.style.display = 'none';
+        
         renderTarget.classList.remove('hidden');
         scene = createScene();
         document.addEventListener('mousedown', scene.onMouseDown, false);
@@ -205,6 +240,8 @@
         if (mainMenusounds.MMbackgroundMusic) {
           mainMenusounds.MMbackgroundMusic.volume = musicVolume;  // Set the music volume
         }
+        
+        
         console.log('Music volume:', musicVolume);
       });
 
@@ -217,6 +254,31 @@
         }
         console.log('Sound effects volume:', sfxVolume);
       });
+
+      function displaySceneText(message, duration = 8000) {
+        // Create text element
+        const sceneText = document.createElement('div');
+        sceneText.textContent = message;
+        sceneText.style.position = 'absolute';
+        sceneText.style.top = '20px';
+        sceneText.style.left = '50%';
+        sceneText.style.transform = 'translateX(-50%)';
+        sceneText.style.color = 'white';
+        sceneText.style.fontSize = '24px';
+        sceneText.style.fontWeight = 'bold';
+        sceneText.style.padding = '10px 20px';
+        sceneText.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+        sceneText.style.borderRadius = '10px';
+        sceneText.style.zIndex = '200';
+      
+        // Append to the document
+        document.body.appendChild(sceneText);
+      
+        // Remove after duration
+        setTimeout(() => {
+          document.body.removeChild(sceneText);
+        }, duration);
+      }
 
     };
   </script>

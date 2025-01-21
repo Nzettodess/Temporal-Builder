@@ -8,8 +8,166 @@ import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
 
 import { createCamera } from './camera.js';
 
+
 export function createScene() {
+
+  function displaySceneText(message, duration = 10000) {
+    // Create text element
+    const sceneText = document.createElement('div');
+    sceneText.textContent = message;
+    sceneText.style.position = 'absolute';
+    sceneText.style.top = '20px';
+    sceneText.style.left = '50%';
+    sceneText.style.transform = 'translateX(-50%)';
+    sceneText.style.color = 'white';
+    sceneText.style.fontSize = '24px';
+    sceneText.style.fontWeight = 'bold';
+    sceneText.style.padding = '10px 20px';
+    sceneText.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+    sceneText.style.borderRadius = '10px';
+    sceneText.style.zIndex = '200';
   
+    // Append to the document
+    document.body.appendChild(sceneText);
+  
+    // Remove after duration
+    setTimeout(() => {
+      document.body.removeChild(sceneText);
+    }, duration);
+  }
+
+  let isPaused = false;
+
+  // Access the settings panel defined in index.html
+  const settingsPanel = document.getElementById('settings-panel');
+ 
+  
+  // Ensure the settings panel is hidden initially
+  settingsPanel.style.display = 'none';
+  
+  // Create Pause Menu Container
+  const pauseMenu = document.createElement('div');
+  pauseMenu.id = 'pause-menu';
+  pauseMenu.style.position = 'absolute';
+  pauseMenu.style.top = '0';
+  pauseMenu.style.left = '0';
+  pauseMenu.style.width = '100%';
+  pauseMenu.style.height = '100%';
+  pauseMenu.style.display = 'none'; // Hidden by default
+  pauseMenu.style.flexDirection = 'column';
+  pauseMenu.style.justifyContent = 'center';
+  pauseMenu.style.alignItems = 'center';
+  pauseMenu.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+  pauseMenu.style.zIndex = '20';
+  
+  // Function to create buttons
+  const createButton = (text, id) => {
+    const button = document.createElement('button');
+    button.textContent = text;
+    button.id = id;
+    button.style.margin = '10px';
+    button.style.padding = '15px 30px';
+    button.style.fontSize = '20px';
+    button.style.color = 'white';
+    button.style.backgroundColor = '#333';
+    button.style.border = '2px solid #666';
+    button.style.borderRadius = '5px';
+    button.style.cursor = 'pointer';
+    button.style.transition = 'background-color 0.3s';
+    button.addEventListener('mouseover', () => {
+      button.style.backgroundColor = '#555';
+    });
+    button.addEventListener('mouseout', () => {
+      button.style.backgroundColor = '#333';
+    });
+    return button;
+  };
+  
+  // Add Buttons to Pause Menu
+  const resumeButton = createButton('Resume Game', 'resume-game');
+  const settingsButton = createButton('Settings', 'pause-settings-button');
+  const exitToMainMenuButton = createButton('Exit to Main Menu', 'exit-to-main-menu');
+  const exitGameButton = createButton('Exit Game', 'exit-game');
+  
+  pauseMenu.appendChild(resumeButton);
+  pauseMenu.appendChild(settingsButton);
+  pauseMenu.appendChild(exitToMainMenuButton);
+  pauseMenu.appendChild(exitGameButton);
+  
+  // Append Pause Menu to the Document
+  document.body.appendChild(pauseMenu);
+  
+  // Create Pause Button
+  const pauseButton = document.createElement('button');
+  pauseButton.textContent = 'Pause';
+  pauseButton.style.position = 'absolute';
+  pauseButton.style.top = '10px';
+  pauseButton.style.left = '10px';
+  pauseButton.style.padding = '10px 20px';
+  pauseButton.style.fontSize = '16px';
+  pauseButton.style.color = 'white';
+  pauseButton.style.backgroundColor = '#333';
+  pauseButton.style.border = '2px solid #666';
+  pauseButton.style.borderRadius = '5px';
+  pauseButton.style.cursor = 'pointer';
+  pauseButton.style.zIndex = '999';
+  
+  // Attach event listener to the Pause Button
+  pauseButton.addEventListener('click', () => {
+    gameAudiosounds.GAbuttonClick.play();
+    togglePause(); // Use togglePause for consistency
+  });
+  
+  // Append Pause Button to the Document
+  document.body.appendChild(pauseButton);
+  
+  // Function to toggle pause menu
+  function togglePause() {
+    isPaused = !isPaused;
+    pauseMenu.style.display = isPaused ? 'flex' : 'none';
+    if (isPaused) {
+      console.log('Game paused');
+      // Add logic to pause game logic or animations here
+    } else {
+      console.log('Game resumed');
+      // Add logic to resume game logic or animations here
+    }
+  }
+  
+  // Resume Game Button
+  resumeButton.addEventListener('click', () => {
+    gameAudiosounds.GAbuttonClick.play();
+    togglePause(); // Use togglePause to resume game
+  });
+  
+  // Open Settings Menu
+  settingsButton.addEventListener('click', () => {
+    gameAudiosounds.GAbuttonClick.play();
+    pauseMenu.style.display = 'none'; // Hide pause menu
+    settingsPanel.style.display = 'flex'; // Show settings panel
+  });
+  
+  // Close Settings and Return to Pause Menu
+  const closeSettingsButton = document.getElementById('close-settings');
+  closeSettingsButton.addEventListener('click', () => {
+    gameAudiosounds.GAbuttonClick.play();
+    settingsPanel.style.display = 'none'; // Hide settings panel
+    pauseMenu.style.display = 'flex'; // Return to pause menu
+  });
+  
+  // Exit to Main Menu Button
+  exitToMainMenuButton.addEventListener('click', () => {
+    gameAudiosounds.GAbuttonClick.play();
+    window.location.reload(); // Reload the page to go back to the main menu
+  });
+  
+  // Exit Game Button
+  exitGameButton.addEventListener('click', () => {
+    gameAudiosounds.GAbuttonClick.play();
+    alert('Thanks for playing!');
+    window.close();
+  });
+
   // Initial scene setup
   const gameWindow = document.getElementById('render-target');
   const scene = new THREE.Scene();
@@ -32,6 +190,9 @@ export function createScene() {
     GAmetal: new Audio('./public/Audio/SFX/metal.mp3'),
     GAstone: new Audio('./public/Audio/SFX/stone.mp3'),
     GAwood: new Audio('./public/Audio/SFX/wood.mp3'),
+    GAupSuccess: new Audio('./public/Audio/SFX/upgrade success.mp3'),
+    GAupFailed: new Audio('./public/Audio/SFX/upgrade fail.mp3'),
+
   };
 
       gameAudiosounds.GAbackgroundMusic.loop = true;
@@ -39,6 +200,35 @@ export function createScene() {
       gameAudiosounds.GAlavaAm.loop = true;
       gameAudiosounds.GAoceanAm.loop = true;
 
+
+      const musicVolumeSlider = document.getElementById('music-volume');
+      const sfxVolumeSlider = document.getElementById('sfx-volume');
+
+      // Update music volume when slider changes
+      musicVolumeSlider.addEventListener('input', (e) => {
+        const musicVolume = e.target.value / 100; // Convert 0-100 range to 0-1
+        gameAudiosounds.GAbackgroundMusic.volume = musicVolume; // Adjust the volume
+        gameAudiosounds.GAforestAm.volume = musicVolume; // Adjust the volume
+        gameAudiosounds.GAlavaAm.volume = musicVolume; // Adjust the volume
+        gameAudiosounds.GAoceanAm.volume = musicVolume; // Adjust the volume
+        // gameAudiosounds.GAbackgroundMusic.volume = musicVolume; // Adjust the volume
+        console.log('Music volume:', musicVolume);
+      });
+
+      // Update sound effects volume when slider changes
+      sfxVolumeSlider.addEventListener('input', (e) => {
+        const sfxVolume = e.target.value / 100; // Convert 0-100 range to 0-1
+        gameAudiosounds.GAbuttonClick.volume = sfxVolume; // Adjust the volume
+        gameAudiosounds.GAearthquake.volume = sfxVolume; // Adjust the volume
+        gameAudiosounds.GAfruits.volume = sfxVolume; // Adjust the volume
+        gameAudiosounds.GAmetal.volume = sfxVolume; // Adjust the volume
+        gameAudiosounds.GAwood.volume = sfxVolume; // Adjust the volume
+        gameAudiosounds.GAstone.volume = sfxVolume; // Adjust the volume
+        gameAudiosounds.GAupSuccess.volume = sfxVolume; // Adjust the volume
+        gameAudiosounds.GAupFailed.volume = sfxVolume; // Adjust the volume
+        console.log('Sound effects volume:', sfxVolume);
+      });
+      
   //island
   const models = [
     { path: "../public/Models/Island/metal/metal1.gltf", position: [-6, .2, 6], scale: 1, name:"Metal" }, // Metal
@@ -124,7 +314,7 @@ export function createScene() {
   let centerModel = null;
   const loadedModels = [];
   const loadedDecoModels = [];
-  const clickCounts = [1000, 1000, 1000, 1000]; //kilograms count
+  const clickCounts = [0, 0, 0, 0]; //kilograms count
   
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = .2;
@@ -229,6 +419,7 @@ function loadTimeMachineModel(versionIndex) {
       // Check if the Time Machine 100 is loaded
       if (versionIndex === timeMachineModels.length - 1) {
         showWinMessage();
+        playMaxLevelCutscene();
       }
     },
     (xhr) => {
@@ -259,6 +450,7 @@ function attemptUpgrade() {
 
   if (hasEnoughClicks) {
     // Deduct the required cost from all click counters
+    gameAudiosounds.GAupSuccess.play();
     clickCounts = clickCounts.map((count) => count - requiredCost);
 
     // Load the next version of the Time Machine
@@ -268,9 +460,55 @@ function attemptUpgrade() {
     console.log(
       `Not enough clicks to upgrade. Version ${nextVersionIndex * 25} requires ${requiredCost} clicks on each object.`
     );
+    
+    gameAudiosounds.GAupFailed.play();
   }
 }
+function playMaxLevelCutscene() {
+  // Create a cutscene video element
+  const cutsceneVideo = document.createElement('video');
+  cutsceneVideo.id = 'max-level-cutscene';
+  cutsceneVideo.src = './public/Video/cutscene2.mp4'; // Replace with your video path
+  cutsceneVideo.style.position = 'absolute';
+  cutsceneVideo.style.top = '0';
+  cutsceneVideo.style.left = '0';
+  cutsceneVideo.style.width = '100%';
+  cutsceneVideo.style.height = '100%';
+  cutsceneVideo.style.objectFit = 'cover';
+  cutsceneVideo.style.zIndex = '100';
+  cutsceneVideo.autoplay = true;
+  cutsceneVideo.controls = false;
+  cutsceneVideo.muted = false;
 
+  // Append the video to the document body
+  document.body.appendChild(cutsceneVideo);
+  displaySceneText(`Your time machine is back in one piece, you are back in time!`);
+
+  // Listen for the end of the video
+  cutsceneVideo.addEventListener('ended', () => {
+    console.log("Cutscene ended. Returning to main menu...");
+    
+    // Remove the video from the DOM
+    document.body.removeChild(cutsceneVideo);
+
+    // Redirect to the main menu
+    // loadMainMenu();
+  });
+
+  // // Optional: Add a skip button for the cutscene
+  // const skipButton = document.createElement('button');
+  // skipButton.textContent = 'Skip';
+  // skipButton.style.position = 'absolute';
+  // skipButton.style.top = '10px';
+  // skipButton.style.right = '10px';
+  // skipButton.style.zIndex = '101';
+  // skipButton.addEventListener('click', () => {
+  //   console.log("Cutscene skipped. Returning to main menu...");
+  //   cutsceneVideo.pause();
+  //   cutsceneVideo.dispatchEvent(new Event('ended')); // Simulate video ending
+  // });
+  // document.body.appendChild(skipButton);
+}
 function showWinMessage() {
   // Create a div element for the "You Won" message
   const winMessage = document.createElement("div");
@@ -415,7 +653,19 @@ function onDocumentMouseDown(event) {
       // Handle click on loaded models
       const index = clickedModel.index;
       clickCounts[index]++;
+      
       labels[index].textContent = `${models[index].name}: ${clickCounts[index]} Kilograms`;
+
+      if (index == 0) {
+        gameAudiosounds.GAmetal.play();
+      }else if (index == 1) {
+        gameAudiosounds.GAwood.play();
+      }else if (index == 2) {
+        gameAudiosounds.GAstone.play();
+      }else if (index == 3) {
+        gameAudiosounds.GAfruits.play();
+      }
+
       return; // Exit early if a loaded model was clicked
     }
 
@@ -437,6 +687,7 @@ function onDocumentMouseDown(event) {
             // Deduct the required cost from the click counts of indices 0-3
             for (let i = 0; i < 4; i++) {
               clickCounts[i] -= currentCost;
+              gameAudiosounds.GAupSuccess.play();
               labels[i].textContent = `${models[i].name}: ${clickCounts[i]} Kilograms`;
             }
     
@@ -449,9 +700,11 @@ function onDocumentMouseDown(event) {
             // Check if the last version is loaded and display the win message
             if (currentVersionIndex === timeMachineModels.length - 1) {
               showWinMessage();
+              playMaxLevelCutscene();
             }
           } else {
             console.log(`Not enough resources to upgrade the Time Machine. Current cost: ${currentCost}`);
+            gameAudiosounds.GAupFailed.play();
           }
           break;
         }
@@ -467,6 +720,7 @@ gameWindow.addEventListener("mousedown", onDocumentMouseDown);
   
   // Attach the combined event listener
   gameWindow.addEventListener("mousedown", onDocumentMouseDown);
+
   function setupLights() {
     const lights = [
       new THREE.AmbientLight(0xffffff, 0.2),
@@ -561,6 +815,7 @@ gameWindow.addEventListener("mousedown", onDocumentMouseDown);
     let angle = 0; // Start angle
   
     function animateSunAndMoon() {
+      if (!isPaused) {
       angle += 0.001; // Adjust rotation speed
       const sunX = sunRadius * Math.cos(angle);
       const sunZ = sunRadius * Math.sin(angle);
@@ -579,7 +834,8 @@ gameWindow.addEventListener("mousedown", onDocumentMouseDown);
   
       // Adjust intensity based on the sun's height
       updateEnvironmentIntensity(sunlight, scene);
-  
+      }
+      
       requestAnimationFrame(animateSunAndMoon);
   }
   
@@ -591,12 +847,14 @@ const EARTHQUAKE_INTERVAL = 20000; // 60 seconds in milliseconds
 const EARTHQUAKE_CHANCE = 0.3; // 30% chance
 
 function earthquakeloop(currentTime) {
+  if (!isPaused) {
   // Check if it's time for the earthquake
   if (currentTime - lastEarthquakeTime >= EARTHQUAKE_INTERVAL) {
     lastEarthquakeTime = currentTime;
 
     // Randomly determine if the earthquake should happen
     if (Math.random() < EARTHQUAKE_CHANCE) {
+      gameAudiosounds.GAearthquake.play();
       console.log("Earthquake triggered!");
       camera.earthquake(2, 0.7); // Trigger the earthquake for 3 seconds with 0.2 intensity
 
@@ -610,9 +868,10 @@ function earthquakeloop(currentTime) {
       console.log("No earthquake this time.");
     }
   }
-
+}
   // Continue the game loop
   requestAnimationFrame(earthquakeloop);
+
 }
 
 // Start the game loop
@@ -636,6 +895,11 @@ requestAnimationFrame(earthquakeloop);
       gameAudiosounds.GAforestAm.play();
       gameAudiosounds.GAlavaAm.play();
       gameAudiosounds.GAoceanAm.play();
+
+      displaySceneText(`Click on those 4 islands around to collect resources to fix your time machine!! 
+        10KG for each type to the first Level, 20KG, 30KG and 40KG for the last level`);
+      // displaySceneText(`10KG for each type to the first Level, 20, 30, 40`);
+
   }
 
   function stop() {
@@ -662,3 +926,4 @@ requestAnimationFrame(earthquakeloop);
     onMouseMove
   }
 }
+
