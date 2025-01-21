@@ -1,35 +1,244 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <link rel="stylesheet" href="./public/main.css">
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Temporal Builder</title>
+  <link rel="stylesheet" href="./public/main.css">
+  <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
 
-    <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
-
-    <script type="importmap">
-      {
-        "imports": {
-          "three": "https://cdn.jsdelivr.net/npm/three@0.171.0/build/three.module.js",
-          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.171.0/examples/jsm/"
-        }
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.171.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.171.0/examples/jsm/"
       }
-    </script>
+    }
+  </script>
+
+  <style>
+    /* Main menu styling */
+    #main-menu {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+    }
   
-  </head>
-  <body>
-    <div id="root-window">
-      <div id="render-target"></div>
+    #main-menu button {
+      margin: 10px;
+      padding: 15px 30px;
+      font-size: 20px;
+      color: white;
+      background-color: #333;
+      border: 2px solid #666;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+  
+    #main-menu button:hover {
+      background-color: #555;
+    }
+  
+    /* Video background */
+    #video-background {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 0;
+    }
+  
+    /* Settings panel */
+    #settings-panel {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 15;
+      background: rgba(0, 0, 0, 0.7);
+    }
+  
+    #settings-panel .panel-content {
+      background-color: #333;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+    }
+  
+    #settings-panel .slider {
+      margin: 10px;
+      width: 200px;
+    }
+  
+    /* Color and styling for text labels */
+    #settings-panel h2 {
+      color: #fff; /* Change color for the heading */
+    }
+  
+    #settings-panel label {
+      color: #f0f0f0; /* Change color for the labels */
+      font-size: 18px; /* Optional: change font size */
+    }
+  
+    #settings-panel button {
+      margin-top: 15px;
+      padding: 10px 20px;
+      background-color: #444;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+  
+    #settings-panel button:hover {
+      background-color: #555;
+    }
+  </style>
+</head>
+<body>
+  <div id="root-window">
+    <!-- Video Background -->
+    <video id="video-background" autoplay muted loop>
+      <source src="./public/Video/Mainmenu.mp4" type="video/mp4">
+      Your browser does not support the video tag.
+    </video>
+
+    <!-- Main Menu -->
+    <div id="main-menu">
+      <button id="new-game-button">New Game</button>
+      <button id="settings-button">Settings</button>
+      <button id="quit-button">Quit</button>
     </div>
-    <script type="module">
-      import { createScene } from './src/scene.js';
-      window.onload = () => {
-        window.scene = createScene();
-        document.addEventListener('mousedown', window.scene.onMouseDown, false);
-        document.addEventListener('mouseup', window.scene.onMouseUp, false);
-        document.addEventListener('mousemove', window.scene.onMouseMove, false);
+
+    <!-- Settings Panel -->
+    <div id="settings-panel">
+      <div class="panel-content">
+        <h2>Settings</h2>
+        <label for="music-volume">Music Volume</label>
+        <input type="range" id="music-volume" class="slider" min="0" max="100" value="50">
+        <br>
+        <label for="sfx-volume">Sound Effects Volume</label>
+        <input type="range" id="sfx-volume" class="slider" min="0" max="100" value="50">
+        <br>
+        <button id="close-settings">Close</button>
+      </div>
+    </div>
+
+    <div id="render-target" class="hidden"></div>
+  </div>
+
+  <script type="module">
+    import { createScene } from './src/scene.js';
+
+    window.onload = () => {
+      const mainMenu = document.getElementById('main-menu');
+      const renderTarget = document.getElementById('render-target');
+      const videoBackground = document.getElementById('video-background');
+      const settingsPanel = document.getElementById('settings-panel');
+      const musicVolumeSlider = document.getElementById('music-volume');
+      const sfxVolumeSlider = document.getElementById(  'sfx-volume');
+      const closeSettingsButton = document.getElementById('close-settings');
+
+      const mainMenusounds = {
+        MMbackgroundMusic: new Audio('./public/Audio/Music/Main Menu Song.mp3'),
+        MMbuttonClick: new Audio('./public/Audio/SFX/click.mp3'),
+      };
+
+      const gameAudiosounds = {
+        GAbackgroundMusic: new Audio('./public/Audio/Music/Game Song.mp3'),
+        GAbuttonClick: new Audio('./public/Audio/SFX/click.mp3'),
+        GAearthquake: new Audio('./public/Audio/SFX/earthquake.mp3'),
+        GAforestAm: new Audio('./public/Audio/SFX/forest ambience.mp3'),
+        GAlavaAm: new Audio('./public/Audio/SFX/lava ambience.mp3'),
+        GAoceanAm: new Audio('./public/Audio/SFX/ocean ambience.mp3'),
+        GAfruits: new Audio('./public/Audio/SFX/fruits.mp3'),
+        GAmetal: new Audio('./public/Audio/SFX/metal.mp3'),
+        GAstone: new Audio('./public/Audio/SFX/stone.mp3'),
+        GAwood: new Audio('./public/Audio/SFX/wood.mp3'),
+      };
+
+      let scene;
+
+      mainMenusounds.MMbackgroundMusic.loop = true;
+      mainMenusounds.MMbackgroundMusic.play();
+
+      gameAudiosounds.GAbackgroundMusic.loop = true;
+      gameAudiosounds.GAforestAm.loop = true;
+      gameAudiosounds.GAlavaAm.loop = true;
+      gameAudiosounds.GAoceanAm.loop = true;
+      
+      
+
+      // Handle "New Game" button
+      document.getElementById('new-game-button').addEventListener('click', () => {
+        mainMenusounds.MMbuttonClick.play();
+        mainMenu.style.display = 'none';
+        mainMenusounds.MMbackgroundMusic.pause();
+        videoBackground.pause();
+        videoBackground.style.display = 'none';
+        renderTarget.classList.remove('hidden');
+        scene = createScene();
+        document.addEventListener('mousedown', scene.onMouseDown, false);
+        document.addEventListener('mouseup', scene.onMouseUp, false);
+        document.addEventListener('mousemove', scene.onMouseMove, false);
         document.addEventListener('contextmenu', (event) => event.preventDefault(), false);
-        window.scene.start();
-      }
-    </script>
-  </body>
+        scene.start();
+      });
+
+      // Handle "Quit" button
+      document.getElementById('quit-button').addEventListener('click', () => {
+        mainMenusounds.MMbuttonClick.play();
+        alert('Thanks for playing!');
+        window.close(); // Attempt to close the browser tab
+      });
+
+      // Handle "Settings" button
+      document.getElementById('settings-button').addEventListener('click', () => {
+        mainMenusounds.MMbuttonClick.play();
+        settingsPanel.style.display = 'flex'; // Show the settings panel
+      });
+
+      // Handle "Close" button in settings
+      closeSettingsButton.addEventListener('click', () => {
+        mainMenusounds.MMbuttonClick.play();
+        settingsPanel.style.display = 'none'; // Hide the settings panel
+      });
+
+      // Handle volume sliders for Music
+      musicVolumeSlider.addEventListener('input', (e) => {
+        const musicVolume = e.target.value / 100;  // Convert slider value to 0-1 range
+        // Adjust the music volume in your game
+        if (mainMenusounds.MMbackgroundMusic) {
+          mainMenusounds.MMbackgroundMusic.volume = musicVolume;  // Set the music volume
+        }
+        console.log('Music volume:', musicVolume);
+      });
+
+      // Handle volume sliders for Sound Effects
+      sfxVolumeSlider.addEventListener('input', (e) => {
+        const sfxVolume = e.target.value / 100;  // Convert slider value to 0-1 range
+        // Adjust the sound effects volume in your game
+        if (mainMenusounds.buttonClickSound) {
+          mainMenusounds.buttonClickSound.volume = sfxVolume;  // Set the sound effects volume
+        }
+        console.log('Sound effects volume:', sfxVolume);
+      });
+
+    };
+  </script>
+</body>
 </html>

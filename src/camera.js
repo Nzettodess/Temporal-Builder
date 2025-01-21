@@ -86,10 +86,44 @@ export function createCamera(gameWindow) {
     camera.lookAt(cameraOrigin);
     camera.updateMatrix();
   }
+
+  function earthquake(duration = 3, intensity = 0.1) {
+    const startTime = performance.now();
+    const originalPosition = camera.position.clone();
+
+    function shake() {
+      const elapsedTime = (performance.now() - startTime) / 1000;
+
+      if (elapsedTime < duration) {
+        // Generate random offsets
+        const offsetX = (Math.random() - 0.5) * intensity;
+        const offsetY = (Math.random() - 0.5) * intensity;
+        const offsetZ = (Math.random() - 0.5) * intensity;
+
+        // Apply offsets to the camera position
+        camera.position.set(
+          originalPosition.x + offsetX,
+          originalPosition.y + offsetY,
+          originalPosition.z + offsetZ
+        );
+        camera.lookAt(cameraOrigin);
+
+        // Continue shaking
+        requestAnimationFrame(shake);
+      } else {
+        // Reset camera position after the earthquake
+        camera.position.copy(originalPosition);
+        camera.lookAt(cameraOrigin);
+      }
+    }
+
+    shake();
+  }
   return {
     camera,
     onMouseDown,
     onMouseUp,
-    onMouseMove
+    onMouseMove,
+    earthquake,
   }
 }

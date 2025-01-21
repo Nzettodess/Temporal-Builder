@@ -21,10 +21,27 @@ export function createScene() {
   renderer.setSize(gameWindow.offsetWidth, gameWindow.offsetHeight);
   gameWindow.appendChild(renderer.domElement);
   
+  const gameAudiosounds = {
+    GAbackgroundMusic: new Audio('./public/Audio/Music/Game Song.mp3'),
+    GAbuttonClick: new Audio('./public/Audio/SFX/click.mp3'),
+    GAearthquake: new Audio('./public/Audio/SFX/earthquake.mp3'),
+    GAforestAm: new Audio('./public/Audio/SFX/forest ambience.mp3'),
+    GAlavaAm: new Audio('./public/Audio/SFX/lava ambience.mp3'),
+    GAoceanAm: new Audio('./public/Audio/SFX/ocean ambience.mp3'),
+    GAfruits: new Audio('./public/Audio/SFX/fruits.mp3'),
+    GAmetal: new Audio('./public/Audio/SFX/metal.mp3'),
+    GAstone: new Audio('./public/Audio/SFX/stone.mp3'),
+    GAwood: new Audio('./public/Audio/SFX/wood.mp3'),
+  };
+
+      gameAudiosounds.GAbackgroundMusic.loop = true;
+      gameAudiosounds.GAforestAm.loop = true;
+      gameAudiosounds.GAlavaAm.loop = true;
+      gameAudiosounds.GAoceanAm.loop = true;
 
   //island
   const models = [
-    { path: "../public/Models/Island/metal/metal.gltf", position: [-6, .2, 6], scale: 1, name:"Metal" }, // Metal
+    { path: "../public/Models/Island/metal/metal1.gltf", position: [-6, .2, 6], scale: 1, name:"Metal" }, // Metal
     { path: "../public/Models/Island/forest/forest.gltf", position: [6, 1, -6], scale: 1.5,name:"Wood" }, // Forest
     { path: "../public/Models/Island/stone/stone.gltf", position: [-6, 0, -6], scale: .3, name: "Stone"}, // Stone
     { path: "../public/Models/Island/food/food.gltf", position: [6, 2, 6], scale: 1,name: "Food" }, // Food
@@ -107,7 +124,7 @@ export function createScene() {
   let centerModel = null;
   const loadedModels = [];
   const loadedDecoModels = [];
-  const clickCounts = [0, 0, 0, 0];
+  const clickCounts = [1000, 1000, 1000, 1000]; //kilograms count
   
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = .2;
@@ -142,8 +159,8 @@ export function createScene() {
     (gltf) => {
       // Add the loaded model to the scene
       const model = gltf.scene;
-      model.position.set(0.5, 0.1, 0.5); // Adjust position if needed
-      model.scale.set(0.7, 0.7, 0.7);
+      model.position.set(0.5, -0.1, 0.5); // Adjust position if needed
+      model.scale.set(1, 1, 1);
       scene.add(model);
 
       // Store reference to the center model
@@ -203,8 +220,8 @@ function loadTimeMachineModel(versionIndex) {
     timeMachineModels[versionIndex],
     (glb) => {
       timeMachineModel = glb.scene;
-      timeMachineModel.position.set(0.5, 1, 0.5);
-      timeMachineModel.scale.set(0.02, 0.02, 0.02);
+      timeMachineModel.position.set(0.5, 1, 0.2);
+      timeMachineModel.scale.set(0.05, 0.05, 0.05);
       scene.add(timeMachineModel);
 
       console.log(`Time Machine version ${versionIndex * 25} loaded successfully!`);
@@ -569,7 +586,37 @@ gameWindow.addEventListener("mousedown", onDocumentMouseDown);
     animateSunAndMoon();
   }
   
-  
+  let lastEarthquakeTime = 0; // Tracks the last time an earthquake occurred
+const EARTHQUAKE_INTERVAL = 20000; // 60 seconds in milliseconds
+const EARTHQUAKE_CHANCE = 0.3; // 30% chance
+
+function earthquakeloop(currentTime) {
+  // Check if it's time for the earthquake
+  if (currentTime - lastEarthquakeTime >= EARTHQUAKE_INTERVAL) {
+    lastEarthquakeTime = currentTime;
+
+    // Randomly determine if the earthquake should happen
+    if (Math.random() < EARTHQUAKE_CHANCE) {
+      console.log("Earthquake triggered!");
+      camera.earthquake(2, 0.7); // Trigger the earthquake for 3 seconds with 0.2 intensity
+
+      // Deduct 10 from clickCounts and clamp to a minimum of 0
+  for (let i = 0; i < 4; i++) {
+    clickCounts[i] = Math.max(0, clickCounts[i] - 10); // Deduct 10, but ensure it doesn't go below 0
+    labels[i].textContent = `${models[i].name}: ${clickCounts[i]} Kilograms`; // Update the label
+  }
+
+    } else {
+      console.log("No earthquake this time.");
+    }
+  }
+
+  // Continue the game loop
+  requestAnimationFrame(earthquakeloop);
+}
+
+// Start the game loop
+requestAnimationFrame(earthquakeloop);
 
   function draw() {
     if (scene.userData.mixer) {
@@ -585,6 +632,10 @@ gameWindow.addEventListener("mousedown", onDocumentMouseDown);
 
   function start() {
     renderer.setAnimationLoop(draw);
+      gameAudiosounds.GAbackgroundMusic.play();
+      gameAudiosounds.GAforestAm.play();
+      gameAudiosounds.GAlavaAm.play();
+      gameAudiosounds.GAoceanAm.play();
   }
 
   function stop() {
