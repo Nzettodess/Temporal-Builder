@@ -6,6 +6,7 @@ import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import { Scene, EquirectangularReflectionMapping, ACESFilmicToneMapping, WebGLRenderer } from 'three';
 import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
 
+
 import { createCamera } from './camera.js';
 
 
@@ -111,6 +112,7 @@ export function createScene() {
   pauseButton.style.borderRadius = '5px';
   pauseButton.style.cursor = 'pointer';
   pauseButton.style.zIndex = '999';
+  pauseButton.style.userSelect = 'none';
   
   // Attach event listener to the Pause Button
   pauseButton.addEventListener('click', () => {
@@ -665,6 +667,14 @@ function onDocumentMouseDown(event) {
       }else if (index == 3) {
         gameAudiosounds.GAfruits.play();
       }
+
+      gsap.to(clickedModel.model.position, {
+        y: clickedModel.model.position.y + 0.2, // Move up by 0.5 units
+        duration: 0.2,
+        ease: "power1.out",
+        yoyo: true,
+        repeat: 1 // Bounce back to original position
+      });
 
       return; // Exit early if a loaded model was clicked
     }
