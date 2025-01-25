@@ -597,32 +597,44 @@ document.body.appendChild(updateMessage);
 
   //Labels and click counters
   //const labelsNames = ["Wood", "Metal", "Rock", "Food"];
-  const labelContainer = document.createElement('div');
-  labelContainer.style.position = 'absolute';
-  labelContainer.style.top = '10px';
-  labelContainer.style.right = '10px';
-  labelContainer.style.color = '#ffffff';
-  labelContainer.style.fontFamily = 'Arial, sans-serif';
-  labelContainer.style.fontSize = '14px';
-  labelContainer.style.padding = '10px';
-  labelContainer.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-  labelContainer.style.borderRadius = '5px';
-  labelContainer.style.userSelect = 'none';
-  document.body.appendChild(labelContainer);
+ // Labels and click counters
+const labelContainer = document.createElement('div');
+labelContainer.style.position = 'absolute';
+labelContainer.style.top = '10px';
+labelContainer.style.right = '10px';
+labelContainer.style.color = '#ffffff';
+labelContainer.style.fontFamily = 'Arial, sans-serif';
+labelContainer.style.fontSize = '14px';
+labelContainer.style.padding = '10px';
+labelContainer.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+labelContainer.style.borderRadius = '5px';
+labelContainer.style.userSelect = 'none';
+document.body.appendChild(labelContainer);
 
-  const labels = models.map((model, index) => {
-    const label = document.createElement('div');
-    label.textContent = `${model.name}: 0 Kilograms`;
-    label.style.marginBottom = '5px';
-    label.style.userSelect = 'none';
-    labelContainer.appendChild(label);
-    return label;
-  });
+// Define upgrade costs for each version of the Time Machine
+const upgradeCosts = [10, 20, 30, 40, 5000]; // Adjust as needed
+let currentCost = upgradeCosts[0]; // Start with the cost of the first upgrade
 
-  setupLights();
+const labels = models.map((model, index) => {
+  const label = document.createElement('div');
+  label.textContent = `${model.name}: 0 Kilograms / ${currentCost} Kilograms`;
+  label.style.marginBottom = '5px';
+  label.style.userSelect = 'none';
+  labelContainer.appendChild(label);
+  return label;
+});
 
-  const raycaster = new THREE.Raycaster();
+setupLights();
+
+const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
+
+function updateLabels() {
+  // Update all labels with current and required amounts
+  for (let i = 0; i < models.length; i++) {
+    labels[i].textContent = `${models[i].name}: ${clickCounts[i]} Kilograms / ${currentCost} Kilograms`;
+  }
+}
 
 function onDocumentMouseDown(event) {
   // Convert mouse position to normalized device coordinates
@@ -655,21 +667,22 @@ function onDocumentMouseDown(event) {
       // Handle click on loaded models
       const index = clickedModel.index;
       clickCounts[index]++;
-      
-      labels[index].textContent = `${models[index].name}: ${clickCounts[index]} Kilograms`;
+      updateLabels(); // Update labels after click
 
-      if (index == 0) {
+      // Play corresponding sound
+      if (index === 0) {
         gameAudiosounds.GAmetal.play();
-      }else if (index == 1) {
+      } else if (index === 1) {
         gameAudiosounds.GAwood.play();
-      }else if (index == 2) {
+      } else if (index === 2) {
         gameAudiosounds.GAstone.play();
-      }else if (index == 3) {
+      } else if (index === 3) {
         gameAudiosounds.GAfruits.play();
       }
 
+      // Add bounce animation using GSAP
       gsap.to(clickedModel.model.position, {
-        y: clickedModel.model.position.y + 0.2, // Move up by 0.5 units
+        y: clickedModel.model.position.y + 0.2, // Move up by 0.2 units
         duration: 0.2,
         ease: "power1.out",
         yoyo: true,
@@ -684,34 +697,31 @@ function onDocumentMouseDown(event) {
       let parent = intersected;
       while (parent) {
         if (timeMachineModel === parent) {
-          // Define costs for each version of the Time Machine
-          const upgradeCosts = [10, 20, 30, 40, 5000]; // Adjust these costs as needed for each version
-    
-          // Get the cost for the current upgrade
-          const currentCost = upgradeCosts[currentVersionIndex];
-    
           // Check if all indices 0-3 have at least the required clicks for the current version
           const canUpgrade = clickCounts.slice(0, 4).every(count => count >= currentCost);
-    
+
           if (canUpgrade) {
             // Deduct the required cost from the click counts of indices 0-3
             for (let i = 0; i < 4; i++) {
               clickCounts[i] -= currentCost;
               gameAudiosounds.GAupSuccess.play();
-              labels[i].textContent = `${models[i].name}: ${clickCounts[i]} Kilograms`;
             }
-    
-            // Increment the version index and wrap around if it exceeds the array length
-            currentVersionIndex = (currentVersionIndex + 1) % timeMachineModels.length;
-    
+
+            // Increment the version index and update the current cost
+            currentVersionIndex = (currentVersionIndex + 1) % upgradeCosts.length;
+            currentCost = upgradeCosts[currentVersionIndex]; // Update the cost for the next upgrade
+
             // Load the next version of the model
             loadTimeMachineModel(currentVersionIndex);
-    
+
             // Check if the last version is loaded and display the win message
             if (currentVersionIndex === timeMachineModels.length - 1) {
               showWinMessage();
               playMaxLevelCutscene();
             }
+
+            // Update labels after the upgrade
+            updateLabels();
           } else {
             console.log(`Not enough resources to upgrade the Time Machine. Current cost: ${currentCost}`);
             gameAudiosounds.GAupFailed.play();
@@ -723,6 +733,7 @@ function onDocumentMouseDown(event) {
     }
   }
 }
+
 
 // Attach the combined event listener
 gameWindow.addEventListener("mousedown", onDocumentMouseDown);
@@ -858,31 +869,30 @@ const EARTHQUAKE_CHANCE = 0.3; // 30% chance
 
 function earthquakeloop(currentTime) {
   if (!isPaused) {
-  // Check if it's time for the earthquake
-  if (currentTime - lastEarthquakeTime >= EARTHQUAKE_INTERVAL) {
-    lastEarthquakeTime = currentTime;
+    // Check if it's time for the earthquake
+    if (currentTime - lastEarthquakeTime >= EARTHQUAKE_INTERVAL) {
+      lastEarthquakeTime = currentTime;
 
-    // Randomly determine if the earthquake should happen
-    if (Math.random() < EARTHQUAKE_CHANCE) {
-      gameAudiosounds.GAearthquake.play();
-      console.log("Earthquake triggered!");
-      camera.earthquake(2, 0.7); // Trigger the earthquake for 3 seconds with 0.2 intensity
+      // Randomly determine if the earthquake should happen
+      if (Math.random() < EARTHQUAKE_CHANCE) {
+        gameAudiosounds.GAearthquake.play();
+        console.log("Earthquake triggered!");
+        camera.earthquake(2, 0.7); // Trigger the earthquake for 3 seconds with 0.7 intensity
 
-      // Deduct 10 from clickCounts and clamp to a minimum of 0
-  for (let i = 0; i < 4; i++) {
-    clickCounts[i] = Math.max(0, clickCounts[i] - 10); // Deduct 10, but ensure it doesn't go below 0
-    labels[i].textContent = `${models[i].name}: ${clickCounts[i]} Kilograms`; // Update the label
-  }
-
-    } else {
-      console.log("No earthquake this time.");
+        // Deduct 10 from clickCounts and clamp to a minimum of 0
+        for (let i = 0; i < 4; i++) {
+          clickCounts[i] = Math.max(0, clickCounts[i] - 10); // Deduct 10, but ensure it doesn't go below 0
+          labels[i].textContent = `${models[i].name}: ${clickCounts[i]} Kilograms / ${currentCost} Kilograms`; // Update the label
+        }
+      } else {
+        console.log("No earthquake this time.");
+      }
     }
   }
-}
   // Continue the game loop
   requestAnimationFrame(earthquakeloop);
-
 }
+
 
 // Start the game loop
 requestAnimationFrame(earthquakeloop);
