@@ -233,7 +233,7 @@ export function createScene() {
       
   //island
   const models = [
-    { path: "../public/Models/Island/metal/metal1.gltf", position: [-6, .2, 6], scale: 1, name:"Metal" }, // Metal
+    { path: "../public/Models/Island/metal/metal1.gltf", position: [-6, 0.1, 6], scale: 1, name:"Metal" }, // Metal
     { path: "../public/Models/Island/forest/forest.gltf", position: [6, 1, -6], scale: 1.5,name:"Wood" }, // Forest
     { path: "../public/Models/Island/stone/stone.gltf", position: [-6, 0, -6], scale: .3, name: "Stone"}, // Stone
     { path: "../public/Models/Island/food/food.gltf", position: [6, 2, 6], scale: 1,name: "Food" }, // Food
@@ -680,16 +680,37 @@ function onDocumentMouseDown(event) {
         gameAudiosounds.GAfruits.play();
       }
 
-      // Add bounce animation using GSAP
-      gsap.to(clickedModel.model.position, {
-        y: clickedModel.model.position.y + 0.2, // Move up by 0.2 units
-        duration: 0.2,
-        ease: "power1.out",
-        yoyo: true,
-        repeat: 1 // Bounce back to original position
-      });
+      // Store the original Y position
+if (!clickedModel.originalY) {
+  clickedModel.originalY = clickedModel.model.position.y; // Set it once during initialization
+}
 
-      return; // Exit early if a loaded model was clicked
+// Ensure no stacking or leftover animations
+gsap.killTweensOf(clickedModel.model.position);
+
+// Animate the bounce
+gsap.to(clickedModel.model.position, {
+  y: clickedModel.originalY + 0.2, // Move up relative to original position
+  duration: 0.2,
+  ease: "power1.out",
+  yoyo: true,
+  repeat: 1, // Bounce back to the original position
+  onComplete: () => {
+    // Ensure Y position is corrected after animation
+    clickedModel.model.position.y = clickedModel.originalY;
+  },
+});
+
+      // gsap.to(clickedModel.model.position, {
+      //   y: clickedModel.model.position.y + 0.2, // Move up by 0.2 units
+      //   duration: 0.2,
+      //   ease: "power1.out",
+      //   yoyo: true,
+      //   repeat: 1, // Bounce back to original position
+      //   overwrite: 'auto' // Overwrite any ongoing animations
+      // });
+
+      // return; // Exit early if a loaded model was clicked
     }
 
     // Handle click on the Time Machine model
