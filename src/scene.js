@@ -612,7 +612,7 @@ labelContainer.style.userSelect = 'none';
 document.body.appendChild(labelContainer);
 
 // Define upgrade costs for each version of the Time Machine
-const upgradeCosts = [10, 20, 30, 40, 5000]; // Adjust as needed
+const upgradeCosts = [20, 50, 80, 100, 10000]; // Adjust as needed
 let currentCost = upgradeCosts[0]; // Start with the cost of the first upgrade
 
 const labels = models.map((model, index) => {
@@ -885,8 +885,8 @@ gameWindow.addEventListener("mousedown", onDocumentMouseDown);
   }
   
   let lastEarthquakeTime = 0; // Tracks the last time an earthquake occurred
-const EARTHQUAKE_INTERVAL = 20000; // 60 seconds in milliseconds
-const EARTHQUAKE_CHANCE = 0.3; // 30% chance
+const EARTHQUAKE_INTERVAL = 15000; // 15 seconds in milliseconds
+const EARTHQUAKE_CHANCE = 0.5; // 30% chance
 
 function earthquakeloop(currentTime) {
   if (!isPaused) {
@@ -902,9 +902,11 @@ function earthquakeloop(currentTime) {
 
         // Deduct 10 from clickCounts and clamp to a minimum of 0
         for (let i = 0; i < 4; i++) {
-          clickCounts[i] = Math.max(0, clickCounts[i] - 10); // Deduct 10, but ensure it doesn't go below 0
-          labels[i].textContent = `${models[i].name}: ${clickCounts[i]} Kilograms / ${currentCost} Kilograms`; // Update the label
-        }
+          const maxDeduction = Math.floor(clickCounts[i] * 0.8); // Maximum 80% deduction
+          const randomDeduction = Math.floor(Math.random() * (maxDeduction + 1)); // Random number between 0 and maxDeduction
+          clickCounts[i] = Math.max(0, clickCounts[i] - randomDeduction);
+          labels[i].textContent = `${models[i].name}: ${clickCounts[i]} Kilograms / ${currentCost} Kilograms`;
+        }        
       } else {
         console.log("No earthquake this time.");
       }
