@@ -1,14 +1,8 @@
 import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { GUI } from 'https://cdn.jsdelivr.net/npm/lil-gui@0.20/+esm'; 
-import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
-import { Scene, EquirectangularReflectionMapping, ACESFilmicToneMapping, WebGLRenderer } from 'three';
 import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
-
-
 import { createCamera } from './camera.js';
-
 
 export function createScene() {
 
@@ -37,12 +31,16 @@ export function createScene() {
     }, duration);
   }
 
+  const buildings = []; // List to track buildings
+  let selectedBuildingType = null;
+  const activeBuildings = []; // Track active buildings for resource generation
+  const restrictedZones = []; // Array to store island and deco models for collision checks
+
   let isPaused = false;
 
   // Access the settings panel defined in index.html
   const settingsPanel = document.getElementById('settings-panel');
  
-  
   // Ensure the settings panel is hidden initially
   settingsPanel.style.display = 'none';
   
@@ -194,6 +192,10 @@ export function createScene() {
     GAwood: new Audio('./public/Audio/SFX/wood.mp3'),
     GAupSuccess: new Audio('./public/Audio/SFX/upgrade success.mp3'),
     GAupFailed: new Audio('./public/Audio/SFX/upgrade fail.mp3'),
+    GAmeteor: new Audio('./public/Audio/SFX/meteor.mp3'),
+    GAtornado: new Audio('./public/Audio/SFX/tornado.mp3'),
+    GAthunder: new Audio('./public/Audio/SFX/thunder.mp3'),
+    GAbuild: new Audio('./public/Audio/SFX/building placing.mp3'),
 
   };
 
@@ -201,7 +203,6 @@ export function createScene() {
       gameAudiosounds.GAforestAm.loop = true;
       gameAudiosounds.GAlavaAm.loop = true;
       gameAudiosounds.GAoceanAm.loop = true;
-
 
       const musicVolumeSlider = document.getElementById('music-volume');
       const sfxVolumeSlider = document.getElementById('sfx-volume');
@@ -228,11 +229,15 @@ export function createScene() {
         gameAudiosounds.GAstone.volume = sfxVolume; // Adjust the volume
         gameAudiosounds.GAupSuccess.volume = sfxVolume; // Adjust the volume
         gameAudiosounds.GAupFailed.volume = sfxVolume; // Adjust the volume
+        gameAudiosounds.GAmeteor.volume = sfxVolume; // Adjust the volume
+        gameAudiosounds.GAtornado.volume = sfxVolume; // Adjust the volume
+        gameAudiosounds.GAthunder.volume = sfxVolume; // Adjust the volume
+        gameAudiosounds.GAbuild.volume = sfxVolume; // Adjust the volume
         console.log('Sound effects volume:', sfxVolume);
       });
-      
+
   //island
-  const models = [
+  const clickModels = [
     { path: "../public/Models/Island/metal/metal1.gltf", position: [-6, 0.1, 6], scale: 1, name:"Metal" }, // Metal
     { path: "../public/Models/Island/forest/forest.gltf", position: [6, 1, -6], scale: 1.5,name:"Wood" }, // Forest
     { path: "../public/Models/Island/stone/stone.gltf", position: [-6, 0, -6], scale: .3, name: "Stone"}, // Stone
@@ -240,7 +245,7 @@ export function createScene() {
   ];
   
   //moutain
-  const decomodels = [
+  const decoMountain = [
     { path: "../public/Models/Moutain/Moutain0.gltf", position: [-17, .4, 17], scale: 2, name:"deco" }, 
     { path: "../public/Models/Moutain/Moutain0.gltf", position: [-21, .4, 10], scale: 2, name:"deco" }, 
     { path: "../public/Models/Moutain/Moutain0.gltf", position: [-20, .4, 5], scale: 2, name:"deco" }, 
@@ -307,16 +312,44 @@ export function createScene() {
     "../public/Models/Time Machine/Time Machine 100.gltf",
   ];
 
-  const versionCosts = [0, 0, 0, 0, 0]; // Costs for versions: 0, 25, 50, 75, 100
+  const buildingTypes = {
+    Wood: {
+      resourceType: "wood",
+      cost: { wood: 200, stone: 100 },
+      generationRates: [1],
+      modelPaths: ['../public/Models/Building/Timber/timber.gltf'],
+      scale: 0.1,
+    },
+    Stone: {
+      resourceType: "stone",
+      cost: { wood: 100, stone: 200 },
+      generationRates: [1],
+      modelPaths: ['../public/Models/Building/Quarry/quarry.gltf'],
+      scale: 0.1,
+    },
+    Metal: {
+      resourceType: "metal",
+      cost: { wood: 300, stone: 300 },
+      generationRates: [1],
+      modelPaths: ['../public/Models/Building/Foundry/foundry.gltf'],
+      scale: 0.1,
+    },
+    Food: {
+      resourceType: "food",
+      cost: { wood: 150, stone: 100 },
+      generationRates: [1],
+      modelPaths: ['../public/Models/Building/Farm/farm.gltf'],
+      scale: 0.1,
+    },
+  };
+
   let currentVersionIndex = 0; // Track the current version
   let timeMachineModel = null; // Reference to the currently displayed model
 
-
   const gltfLoader = new GLTFLoader();
-  let centerModel = null;
   const loadedModels = [];
   const loadedDecoModels = [];
-  const clickCounts = [0, 0, 0, 0]; //kilograms count
+  let clickCounts = [0, 0, 0, 0]; //kilograms count
   
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = .2;
@@ -333,13 +366,13 @@ export function createScene() {
         scene.environment = texture;
         scene.background = texture;
   
-        console.log('EXR HDRI loaded successfully!');
+        //console.log('EXR HDRI loaded successfully!');
       },
       (xhr) => {
-        console.log(`EXR HDRI loading: ${(xhr.loaded / xhr.total) * 100}% loaded`);
+        //console.log(`EXR HDRI loading: ${(xhr.loaded / xhr.total) * 100}% loaded`);
       },
       (error) => {
-        console.error('Error loading EXR HDRI:', error);
+        //console.error('Error loading EXR HDRI:', error);
       }
     );
   }
@@ -361,14 +394,13 @@ export function createScene() {
     },
     (xhr) => {
       // Called while loading is in progress
-      console.log((xhr.loaded / xhr.total) * 100 + '% loaded');
+      //console.log((xhr.loaded / xhr.total) * 100 + '% loaded');
     },
     (error) => {
       // Called if loading the model fails
-      console.error('An error occurred while loading the GLTF model', error);
+      //console.error('An error occurred while loading the GLTF model', error);
     }
   );
-
 
   const clockOcean = new THREE.Clock();
   // Load the OCean model
@@ -390,15 +422,15 @@ export function createScene() {
           scene.userData.mixer = mixer; // Store mixer to be updated
       
 
-      console.log("Ground loaded successfully!");
+      //console.log("Ground loaded successfully!");
     },
     (xhr) => {
       // Loading progress
-      console.log(`Ground model loading: ${(xhr.loaded / xhr.total) * 100}% loaded`);
+      //console.log(`Ground model loading: ${(xhr.loaded / xhr.total) * 100}% loaded`);
     },
     (error) => {
       // Loading error
-      console.error("Error loading ground model:", error);
+      //console.error("Error loading ground model:", error);
     }
   );  
 
@@ -416,7 +448,7 @@ function loadTimeMachineModel(versionIndex) {
       timeMachineModel.scale.set(0.05, 0.05, 0.05);
       scene.add(timeMachineModel);
 
-      console.log(`Time Machine version ${versionIndex * 25} loaded successfully!`);
+      //console.log(`Time Machine version ${versionIndex * 25} loaded successfully!`);
 
       // Check if the Time Machine 100 is loaded
       if (versionIndex === timeMachineModels.length - 1) {
@@ -432,40 +464,275 @@ function loadTimeMachineModel(versionIndex) {
       );
     },
     (error) => {
-      console.error(`Error loading Time Machine model version ${versionIndex * 25}:`, error);
+      //console.error(`Error loading Time Machine model version ${versionIndex * 25}:`, error);
     }
   );
 }
 // Load the initial model
 loadTimeMachineModel(currentVersionIndex);
 
-function attemptUpgrade() {
-  const nextVersionIndex = currentVersionIndex + 1;
+const gridSize = 15; // Grid size for the ocean (2x2)
+const gridTileSize = 2; // Size of each grid tile
+const oceanGrid = []; // Store grid tiles for placement
 
-  if (nextVersionIndex >= timeMachineModels.length) {
-    console.log("Maximum version reached. No further upgrades.");
+
+// Create ocean grid
+function createOceanGrid(position, size, tileSize) {
+  const halfSize = size * tileSize * 0.5;
+
+  for (let row = 0; row < size; row++) {
+    for (let col = 0; col < size; col++) {
+      const tile = {
+        position: new THREE.Vector3(
+          position.x + col * tileSize - halfSize + tileSize * 0.5,
+          position.y,
+          position.z + row * tileSize - halfSize + tileSize * 0.5
+        ),
+        occupied: false,
+        highlight: null,
+      };
+
+      // Create a visual representation of the grid tile
+      // Set opacity to 0 to make it invisible by default
+      const tileHighlight = new THREE.Mesh(
+        new THREE.PlaneGeometry(tileSize, tileSize),
+        new THREE.MeshPhysicalMaterial({
+          color: 0x00ff00, // Base color
+          emissive: 0x32cd32, // Lime green emissive
+          emissiveIntensity: 0, // Initially invisible
+          transparent: true,
+          opacity: 0, // Fully invisible by default
+          side: THREE.DoubleSide,
+        })
+      );
+      tileHighlight.rotation.x = -Math.PI / 2; // Face upward
+      tileHighlight.position.copy(tile.position);
+      scene.add(tileHighlight);
+      tile.highlight = tileHighlight;
+
+      oceanGrid.push(tile);
+    }
+  }
+}
+
+   // Highlight grid tiles on hover
+   const raycasterT = new THREE.Raycaster();
+   const mouseT = new THREE.Vector2();
+ 
+   // Update the mousemove event listener to show highlights only on hover
+   window.addEventListener("mousemove", (event) => {
+    mouseT.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouseT.y = -(event.clientY / window.innerHeight) * 2 + 1;
+  
+    raycasterT.setFromCamera(mouseT, camera.camera);
+  
+    const intersects = raycasterT.intersectObjects(oceanGrid.map(tile => tile.highlight));
+    
+    // Reset all tiles to invisible
+  oceanGrid.forEach(tile => {
+    tile.highlight.material.opacity = 0;
+    tile.highlight.material.emissiveIntensity = 0;
+  });
+
+  if (intersects.length > 0) {
+    const intersected = intersects[0].object;
+    const hoveredTile = oceanGrid.find(tile => tile.highlight === intersected);
+
+    if (hoveredTile && isTileBuildable(hoveredTile)) {
+      // Show highlight only if the tile is buildable
+      hoveredTile.highlight.material.opacity = 1;
+      hoveredTile.highlight.material.emissiveIntensity = 200; // Glow effect
+      }
+    }
+  });
+
+window.addEventListener("mousedown", (event) => {
+  if (!selectedBuildingType) return;
+
+  mouseT.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouseT.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+  raycasterT.setFromCamera(mouseT, camera.camera);
+  const intersects = raycasterT.intersectObjects(oceanGrid.map(tile => tile.highlight));
+
+  if (intersects.length > 0) {
+    const intersected = intersects[0].object;
+    const selectedTile = oceanGrid.find(tile => tile.highlight === intersected);
+
+    if (selectedTile) {
+      addBuildingToOceanGrid(selectedBuildingType, selectedTile);
+      
+
+    }
+  }
+});
+
+window.addEventListener("mousedown", (event) => {
+  mouseT.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouseT.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+  raycasterT.setFromCamera(mouseT, camera.camera);
+  const intersects = raycasterT.intersectObjects(oceanGrid.map(tile => tile.highlight));
+
+  if (intersects.length > 0) {
+    const intersected = intersects[0].object;
+    const selectedTile = oceanGrid.find(tile => tile.highlight === intersected);
+    if (selectedTile) {
+      const tilePosition = getTileMapPosition(selectedTile);
+      console.log(`Clicked on grid row: ${tilePosition.row}, col: ${tilePosition.col}`);
+    }
+  }
+});
+
+[...clickModels, ...loadedDecoModels].forEach((model) => {
+  restrictedZones.push(model.model);
+});
+
+const tileMap = [
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], //0
+  [0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0], //1
+  [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0], //2
+  [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0],  //3
+  [0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0], //4
+  [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0], //5
+  [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0], //6
+  [0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0], //7
+  [0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0], //8
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], //9
+  [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0], //10
+  [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0], //11
+  [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0], //12
+  [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0], //13
+  [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0], //14
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], //15
+  // [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], //15
+
+]; // Initialize 15x15 grid with buildable tiles (1) // 0 = restricted, 1 = buildable
+
+function getTileMapPosition(tile) {
+  const halfGridSize = gridSize / 2;
+  return {
+    row: Math.max(0, Math.min(14, Math.round((tile.position.z + halfGridSize * gridTileSize) / gridTileSize))),
+    col: Math.max(0, Math.min(14, Math.round((tile.position.x + halfGridSize * gridTileSize) / gridTileSize))),
+  };
+}
+
+function isTileBuildable(targetTile) {
+  const { row, col } = getTileMapPosition(targetTile);
+  if (tileMap[row]?.[col] === 0) {
+    //console.log(`Tile at row ${row + 1}, col ${col + 1} is restricted.`);
+    return false;
+  }
+  return true;
+}
+
+function addBuildingToOceanGrid(buildingType, targetTile) {
+  if (!targetTile) {
+    //console.log("Invalid target tile.");
     return;
   }
 
-  const requiredCost = versionCosts[nextVersionIndex];
-  const hasEnoughClicks = clickCounts.every((count) => count >= requiredCost);
-
-  if (hasEnoughClicks) {
-    // Deduct the required cost from all click counters
-    gameAudiosounds.GAupSuccess.play();
-    clickCounts = clickCounts.map((count) => count - requiredCost);
-
-    // Load the next version of the Time Machine
-    currentVersionIndex = nextVersionIndex;
-    loadTimeMachineModel(currentVersionIndex);
-  } else {
-    console.log(
-      `Not enough clicks to upgrade. Version ${nextVersionIndex * 25} requires ${requiredCost} clicks on each object.`
-    );
-    
-    gameAudiosounds.GAupFailed.play();
+  if (targetTile.occupied) {
+    //console.log(`Tile at row: ${getTileMapPosition(targetTile).row}, col: ${getTileMapPosition(targetTile).col} is already occupied.`);
+    return;
   }
+
+  if (!isTileBuildable(targetTile)) {
+    //console.log("Cannot build here. Tile is restricted.");
+    return;
+  }
+
+  // Check if target tile overlaps with any restricted zones
+  const isRestricted = restrictedZones.filter(Boolean).some((zoneModel) => {
+    if (!zoneModel || !zoneModel.position) return false;
+    const distance = zoneModel.position.distanceTo(targetTile.position);
+    //console.log(`Distance check to restricted zone: ${distance}`);
+    return distance < 1.2;
+  });
+  
+
+  if (isRestricted) {
+    //console.log("Cannot build here. Tile overlaps with restricted zone.");
+    return;
+  }
+
+  const cost = buildingTypes[buildingType]?.cost;
+  if (!cost) {
+    //console.error("Invalid building type.");
+    return;
+  }
+
+  // Check resource availability
+  for (let i = 0; i < clickModels.length; i++) {
+    const resourceName = clickModels[i]?.name?.toLowerCase(); // Ensure the name exists
+    if (!resourceName) continue; // Skip if the name is missing
+    
+    if (cost[resourceName] !== undefined && clickCounts[i] < cost[resourceName]) {
+      console.log(`Not enough ${resourceName} to build ${buildingType}.`);
+      return;
+    }
+  }
+
+  // Deduct resources
+  for (let i = 0; i < clickCounts.length; i++) {
+    const resourceName = clickModels[i].name.toLowerCase();
+    if (cost[resourceName]) {
+      clickCounts[i] -= cost[resourceName];
+    }
+  }
+
+  const loader = new GLTFLoader();
+  loader.load(
+    buildingTypes[buildingType].modelPaths[0],
+    (gltf) => {
+      const buildingModel = gltf.scene;
+      buildingModel.position.copy(targetTile.position);
+
+      const scale = buildingTypes[buildingType].scale || 1;
+      buildingModel.scale.set(scale, scale, scale);
+
+      scene.add(buildingModel);
+      gameAudiosounds.GAbuild.play();
+      targetTile.occupied = true;
+      activeBuildings.push({ type: buildingType, model: buildingModel });
+
+      const building = new Building(buildingType, targetTile.position, targetTile);
+      building.model = buildingModel;
+      buildings.push(building); // Ensure it adds to the disaster tracking list
+
+      console.log(`${buildingType} constructed on the ocean grid.`);
+    },
+    undefined,
+    (error) => {
+      console.error("Error loading building model:", error);
+    }
+  );
 }
+
+function generateResources() {
+  activeBuildings.forEach((building) => {
+    const resourceType = buildingTypes[building.type].resourceType;
+    const resourceIndex = clickModels.findIndex(
+      (model) => model.name.toLowerCase() === resourceType
+    );
+
+    if (resourceIndex !== -1) {
+      // Ensure the generation rate is a number, not an array
+      const generationRate = buildingTypes[building.type].generationRates[0] || 0;
+
+      // Increment resource count
+      clickCounts[resourceIndex] += generationRate;
+
+      // Update the resource label
+      labels[resourceIndex].textContent = `${clickModels[resourceIndex].name}: ${clickCounts[resourceIndex]} Kilograms / ${currentCost} Kilograms`;
+    }
+  });
+}
+
+// Call generateResources every second
+setInterval(generateResources, 1000);
+
+
 function playMaxLevelCutscene() {
   // Create a cutscene video element
   const cutsceneVideo = document.createElement('video');
@@ -537,7 +804,7 @@ function showWinMessage() {
 }
 
   //clickable island
-  models.forEach((model, index) => {
+  clickModels.forEach((model, index) => {
     gltfLoader.load(
       model.path,
       (gltf) => {
@@ -557,7 +824,7 @@ function showWinMessage() {
     );
   });
   //deco moutain
-  decomodels.forEach((decomodels, index) => {
+  decoMountain.forEach((decomodels, index) => {
     gltfLoader.load(
       decomodels.path,
       (gltf) => {
@@ -593,14 +860,12 @@ updateMessage.style.display = 'none'; // Initially hidden
 updateMessage.textContent = 'Update';
 document.body.appendChild(updateMessage);
 
-
-
   //Labels and click counters
   //const labelsNames = ["Wood", "Metal", "Rock", "Food"];
  // Labels and click counters
 const labelContainer = document.createElement('div');
 labelContainer.style.position = 'absolute';
-labelContainer.style.top = '10px';
+labelContainer.style.top = '330px';
 labelContainer.style.right = '10px';
 labelContainer.style.color = '#ffffff';
 labelContainer.style.fontFamily = 'Arial, sans-serif';
@@ -612,10 +877,10 @@ labelContainer.style.userSelect = 'none';
 document.body.appendChild(labelContainer);
 
 // Define upgrade costs for each version of the Time Machine
-const upgradeCosts = [20, 50, 80, 100, 10000]; // Adjust as needed
+const upgradeCosts = [300, 600, 900, 1200, 10000]; // Adjust as needed
 let currentCost = upgradeCosts[0]; // Start with the cost of the first upgrade
 
-const labels = models.map((model, index) => {
+const labels = clickModels.map((model, index) => {
   const label = document.createElement('div');
   label.textContent = `${model.name}: 0 Kilograms / ${currentCost} Kilograms`;
   label.style.marginBottom = '5px';
@@ -631,8 +896,8 @@ const mouse = new THREE.Vector2();
 
 function updateLabels() {
   // Update all labels with current and required amounts
-  for (let i = 0; i < models.length; i++) {
-    labels[i].textContent = `${models[i].name}: ${clickCounts[i]} Kilograms / ${currentCost} Kilograms`;
+  for (let i = 0; i < clickModels.length; i++) {
+    labels[i].textContent = `${clickModels[i].name}: ${clickCounts[i]} Kilograms / ${currentCost} Kilograms`;
   }
 }
 
@@ -701,16 +966,7 @@ gsap.to(clickedModel.model.position, {
   },
 });
 
-      // gsap.to(clickedModel.model.position, {
-      //   y: clickedModel.model.position.y + 0.2, // Move up by 0.2 units
-      //   duration: 0.2,
-      //   ease: "power1.out",
-      //   yoyo: true,
-      //   repeat: 1, // Bounce back to original position
-      //   overwrite: 'auto' // Overwrite any ongoing animations
-      // });
 
-      // return; // Exit early if a loaded model was clicked
     }
 
     // Handle click on the Time Machine model
@@ -754,7 +1010,6 @@ gsap.to(clickedModel.model.position, {
     }
   }
 }
-
 
 // Attach the combined event listener
 gameWindow.addEventListener("mousedown", onDocumentMouseDown);
@@ -885,8 +1140,8 @@ gameWindow.addEventListener("mousedown", onDocumentMouseDown);
   }
   
   let lastEarthquakeTime = 0; // Tracks the last time an earthquake occurred
-const EARTHQUAKE_INTERVAL = 15000; // 15 seconds in milliseconds
-const EARTHQUAKE_CHANCE = 0.5; // 30% chance
+const EARTHQUAKE_INTERVAL = 45000; // 60 seconds in milliseconds
+const EARTHQUAKE_CHANCE = 0.6; // 30% chance
 
 function earthquakeloop(currentTime) {
   if (!isPaused) {
@@ -900,13 +1155,11 @@ function earthquakeloop(currentTime) {
         console.log("Earthquake triggered!");
         camera.earthquake(2, 0.7); // Trigger the earthquake for 3 seconds with 0.7 intensity
 
-        // Deduct 10 from clickCounts and clamp to a minimum of 0
+        // Deduct 30% from clickCounts and clamp to a minimum of 0 (no decimals)
         for (let i = 0; i < 4; i++) {
-          const maxDeduction = Math.floor(clickCounts[i] * 0.8); // Maximum 80% deduction
-          const randomDeduction = Math.floor(Math.random() * (maxDeduction + 1)); // Random number between 0 and maxDeduction
-          clickCounts[i] = Math.max(0, clickCounts[i] - randomDeduction);
-          labels[i].textContent = `${models[i].name}: ${clickCounts[i]} Kilograms / ${currentCost} Kilograms`;
-        }        
+          clickCounts[i] = Math.max(0, Math.floor(clickCounts[i] * 0.7)); // Deduct 30% and round down
+          labels[i].textContent = `${clickModels[i].name}: ${clickCounts[i]} Kilograms / ${currentCost} Kilograms`; // Update the label
+        }
       } else {
         console.log("No earthquake this time.");
       }
@@ -915,10 +1168,196 @@ function earthquakeloop(currentTime) {
   // Continue the game loop
   requestAnimationFrame(earthquakeloop);
 }
-
-
 // Start the game loop
 requestAnimationFrame(earthquakeloop);
+
+// GUI Setup
+const gui = new GUI();
+
+const gameDetails = `
+Time Machine Fixing Costs:
+  - Level 1: 300 of each resource
+  - Level 2: 600 of each resource
+  - Level 3: 900 of each resource
+  - Level 4: 1200 of each resource
+
+Building Costs:
+  - Timber Mill (Wood): 200 Wood, 100 Stone
+  - Quarry (Stone): 100 Wood, 200 Stone
+  - Foundry (Metal): 300 Wood, 300 Stone
+  - Farm (Food): 150 Wood, 100 Stone
+
+Natural Disasters:
+  - Earthquake: Deducts 30% of resources (60% chance every 45s)
+  - Meteor: Destroys 1 random building (50% chance every 30s)
+  - Thunder: Destroys 1 random building (40% chance every 25s)
+  - Tornado: Destroys 3 random buildings (30% chance every 45s)
+
+Random Disaster Trigger:
+  - Meteor, Thunder, Tornado (45% chance every 20s)
+`;
+
+const instructionsFolder = gui.addFolder('Instructions');
+instructionsFolder.add({ MainQuest: () => alert('Click on islands to collect resources. Build building to faster your process and fix the time machine to go home. Check more info in the details.') }, 'MainQuest').name('MainQuest');
+instructionsFolder.add({ Pause: () => alert('Pause button is on the top left of your screen. You may also adjust any settings you like in the settings') }, 'Pause').name('Pause');
+instructionsFolder.add({ Building: () => alert('Select one of the building you wish to build and place on the game world there has highlight. Check more info in the details.') }, 'Building').name('Building');
+instructionsFolder.add({ Disaster: () => alert('There are natural disaster such as earthquake that will destroy your resource earn. Other disaster might destroy your building. Check more info in the details.') }, 'Disaster').name('Disaster');
+instructionsFolder.add({ Details: () => alert(gameDetails) }, 'Details').name('Details');
+instructionsFolder.open();
+
+const buildFolder = gui.addFolder('Building (Earn resources every second)');
+const buildingNames = {
+  Wood: 'Build Timber Mill (Wood)',
+  Stone: 'Build Quarry (Stone)',
+  Metal: 'Build Foundry (Metal)',
+  Food: 'Build Farm (Food)',
+};
+
+Object.keys(buildingTypes).forEach((type) => {
+  buildFolder.add({ [`${buildingNames[type]}`]: () => selectBuildingType(type) }, `${buildingNames[type]}`).name(`${buildingNames[type]}`);
+});
+buildFolder.open();
+
+
+
+function selectBuildingType(type) {
+  console.log(`Selected building type: ${type}`);
+  selectedBuildingType = type;
+}
+
+
+window.addEventListener("mousedown", () => {
+  if (selectedBuildingType) {
+    addBuildingToOceanGrid(selectedBuildingType);
+  }
+});
+
+class Building {
+  constructor(type, position, tile) {
+    this.type = type;
+    this.position = position;
+    this.tile = tile;
+    this.model = null;
+    this.modelPath = buildingTypes[type]?.modelPaths[0];
+    this.scale = buildingTypes[type]?.scale || 1;
+  }
+
+  loadModel(scene) {
+    const loader = new GLTFLoader();
+    if (!this.modelPath) {
+      console.error(`Model path for ${this.type} not found.`);
+      return;
+    }
+
+    loader.load(this.modelPath, (gltf) => {
+      this.model = gltf.scene;
+      this.model.position.copy(this.position);
+      this.model.scale.set(this.scale, this.scale, this.scale);
+      this.model.userData = { type: this.type, tile: this.tile };
+      scene.add(this.model);
+
+      if (this.tile) this.tile.building = this;
+    });
+  }
+}
+
+function removeBuilding(scene, building) {
+  if (!building || !building.model) return;
+  if (building.tile) building.tile.occupied = false;
+  scene.remove(building.model);
+  const index = buildings.indexOf(building);
+  if (index > -1) buildings.splice(index, 1);
+}
+//depre
+function triggerDisaster(scene, buildings) {
+  if (buildings.length === 0) {
+    console.log("No buildings to affect.");
+    return;
+  }
+
+  const randomIndex = Math.floor(Math.random() * buildings.length);
+  const targetBuilding = buildings[randomIndex];
+
+  const disasterGeometry = new THREE.SphereGeometry(1, 32, 32);
+  const disasterMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+  const disasterEffect = new THREE.Mesh(disasterGeometry, disasterMaterial);
+
+  disasterEffect.position.copy(targetBuilding.position);
+  scene.add(disasterEffect);
+
+  setTimeout(() => {
+    scene.remove(disasterEffect);
+    removeBuilding(scene, targetBuilding);
+    buildings.splice(randomIndex, 1);
+  }, 1000); // Remove the building after 1 second
+}
+//depre
+function addBuilding(type, tile) {
+  const position = tile.position.clone();
+  const building = new Building(type, position, tile);
+  building.loadModel(scene);
+  buildings.push(building);
+}
+const disasterSystem = initializeDisasterSystem(scene, buildings, gameAudiosounds);
+
+//cheat
+document.addEventListener('keydown', (event) => {
+  switch (event.key) {
+    case '1':
+      console.log('Thunder cheat activated!');
+      disasterSystem.triggerThunder();
+      break;
+    case '2':
+      console.log('Tornado cheat activated!');
+      disasterSystem.triggerTornado();
+      break;
+    case '3':
+      console.log('Meteor cheat activated!');
+      disasterSystem.triggerMeteoriteImpact();
+      break;
+    case '4':
+      console.log('Earthquake cheat activated!');
+      gameAudiosounds.GAearthquake.play();
+      camera.earthquake(2, 0.7); // Trigger the earthquake for 3 seconds with 0.7 intensity
+      // Deduct 30% from clickCounts and clamp to a minimum of 0 (no decimals)
+      for (let i = 0; i < 4; i++) {
+        clickCounts[i] = Math.max(0, Math.floor(clickCounts[i] * 0.7)); // Deduct 30% and round down
+        labels[i].textContent = `${clickModels[i].name}: ${clickCounts[i]} Kilograms / ${currentCost} Kilograms`; // Update the label
+      }
+      break;
+    case 'd':
+      console.log('Cheat activated! Resources increased.');
+      for (let i = 0; i < clickCounts.length; i++) {
+        clickCounts[i] += 10000;
+        labels[i].textContent = `${clickModels[i].name}: ${clickCounts[i]} Kilograms / ${currentCost} Kilograms`;
+      }
+      break;
+    default:
+      break;
+  }
+});
+
+  setInterval(() => {
+    if (!isPaused) {
+      disasterSystem.randomDisasterTrigger(); // Call the function from returned object
+    }
+  }, 20000);
+  setInterval(() => {
+    if (!isPaused) {
+      disasterSystem.randomMetoerTrigger(); // Call the function from returned object
+    }
+  }, 30000);
+  setInterval(() => {
+    if (!isPaused) {
+      disasterSystem.randomThunderTrigger(); // Call the function from returned object
+    }
+  }, 25000);
+  setInterval(() => {
+    if (!isPaused) {
+      disasterSystem.randomTornadoTrigger(); // Call the function from returned object
+    }
+  }, 45000);
+
 
   function draw() {
     if (scene.userData.mixer) {
@@ -938,10 +1377,11 @@ requestAnimationFrame(earthquakeloop);
       gameAudiosounds.GAforestAm.play();
       gameAudiosounds.GAlavaAm.play();
       gameAudiosounds.GAoceanAm.play();
+      createOceanGrid(new THREE.Vector3(0, 0.6, 0), gridSize, gridTileSize);
+      
 
-      displaySceneText(`Click on those 4 islands around to collect resources to fix your time machine!! 
-        10KG for each type to the first Level, 20KG, 30KG and 40KG for the last level`);
-      // displaySceneText(`10KG for each type to the first Level, 20, 30, 40`);
+      displaySceneText(`Click on those 4 islands around to collect resources to fix your time machine!!
+        Check More on Instruction on the top right!!`);
 
   }
 
@@ -966,7 +1406,232 @@ requestAnimationFrame(earthquakeloop);
     stop,
     onMouseDown,
     onMouseUp,
-    onMouseMove
+    onMouseMove,
   }
 }
 
+export function initializeDisasterSystem(scene, buildings, gameAudiosounds) {
+
+  // Helper function to find and remove building from the scene
+  function removeBuilding(building) {
+    const tile = building.tile;
+    if (tile) {
+        tile.building = null;
+        tile.occupied = false;  // Reset tile occupation status
+    }
+    scene.remove(building.model);
+    const index = buildings.indexOf(building);
+    if (index !== -1) buildings.splice(index, 1);
+    console.log(`${building.type} was destroyed.`);
+}
+
+  // Meteorite impact
+  function triggerMeteoriteImpact() {
+    if (buildings.length === 0) {
+      console.log("No buildings to destroy.");
+      return;
+    }
+
+    const randomIndex = Math.floor(Math.random() * buildings.length);
+    const targetBuilding = buildings[randomIndex];
+
+    const loader = new GLTFLoader();
+    loader.load('../public/Models/Disaster/meteorite/meteorite.gltf', (gltf) => {
+      const meteor = gltf.scene;
+      meteor.position.set(
+        targetBuilding.model.position.x,
+        targetBuilding.model.position.y + 10,
+        targetBuilding.model.position.z
+      );
+      meteor.scale.set(0.1, 0.1, 0.1);
+      // Apply glowing material to the meteor
+  meteor.traverse((child) => {
+    if (child.isMesh) {
+      child.material = new THREE.MeshStandardMaterial({
+        color: 0xff4500,  // Orange color
+        emissive: 0xff4500, // Glowing orange
+        emissiveIntensity: 2.0,
+        roughness: 0.4,
+        metalness: 0.1,
+      });
+    }
+  });
+      scene.add(meteor);
+      gameAudiosounds.GAmeteor.play();
+      const startTime = performance.now();
+      const duration = 1000;
+
+      function animateMeteor() {
+        const elapsedTime = performance.now() - startTime;
+        const t = Math.min(elapsedTime / duration, 1);
+
+        meteor.position.y = THREE.MathUtils.lerp(10, targetBuilding.model.position.y, t);
+
+        if (t < 1) {
+          requestAnimationFrame(animateMeteor);
+        } else {
+          scene.remove(meteor);
+          removeBuilding(targetBuilding);
+        }
+      }
+
+      animateMeteor();
+    });
+  }
+
+  function triggerThunder() {
+    if (buildings.length === 0) {
+      console.log("No buildings to damage.");
+      return;
+    }
+  
+    const randomIndex = Math.floor(Math.random() * buildings.length);
+    const targetBuilding = buildings[randomIndex];
+  
+    createLightningVFX(targetBuilding.model.position);
+    
+    removeBuilding(targetBuilding);
+  }
+  
+  function createLightningVFX(position) {
+    gameAudiosounds.GAthunder.play();
+    const loader = new GLTFLoader();
+    loader.load(
+      '../public/Models/Disaster/lightning/lightning.gltf', // Update the path to your GLTF model
+      (gltf) => {
+        const lightning = gltf.scene;
+        lightning.scale.set(0.5, 0.5, 0.5); // Adjust scale as necessary
+        lightning.position.set(position.x, position.y, position.z);
+        // Apply glowing material to the lightning
+    lightning.traverse((child) => {
+    if (child.isMesh) {
+      child.material = new THREE.MeshStandardMaterial({
+        color: 0xadd8e6,  // Blue color
+        emissive: 0xadd8e6, // Glowing blue
+        emissiveIntensity: 2.0,
+        roughness: 0.4,
+        metalness: 0.1,
+      });
+    }
+  });
+        scene.add(lightning);
+        
+        // Remove the lightning effect after 500ms
+        setTimeout(() => scene.remove(lightning), 500);
+        
+      },
+      undefined,
+      (error) => {
+        console.error("Error loading thunder effect model:", error);
+      }
+    );
+  }
+
+  // Tornado destruction
+  function triggerTornado() {
+    if (buildings.length === 0) {
+      console.log("No buildings to damage.");
+      return;
+    }
+
+    const affectedBuildings = [...buildings].sort(() => 0.5 - Math.random()).slice(0, 3);
+
+    affectedBuildings.forEach((building) => {
+      const loader = new GLTFLoader();
+      loader.load('../public/Models/Disaster/tornado/tornado.gltf', (gltf) => {
+        const tornado = gltf.scene;
+        tornado.scale.set(0.1, 0.1, 0.1);
+        tornado.position.set(
+          building.model.position.x,
+          building.model.position.y ,
+          building.model.position.z
+        );
+        // Apply glowing material to the meteor
+    tornado.traverse((child) => {
+    if (child.isMesh) {
+      child.material = new THREE.MeshStandardMaterial({
+        color: 0xd6f6d5,  // Green color
+        emissive: 0xd6f6d5, // Glowing green
+        emissiveIntensity: 2.0,
+        roughness: 0.4,
+        metalness: 0.1,
+      });
+    }
+  });
+        scene.add(tornado);
+        gameAudiosounds.GAtornado.play();
+        let angle = 0;
+        const startTime = performance.now();
+        const duration = 2000;
+
+        function animateTornado() {
+          const elapsedTime = performance.now() - startTime;
+          const t = Math.min(elapsedTime / duration, 1);
+          angle += 0.1;
+          tornado.rotation.y = angle;
+
+          if (t < 1) {
+            requestAnimationFrame(animateTornado);
+          } else {
+            scene.remove(tornado);
+            removeBuilding(building);
+          }
+        }
+
+        animateTornado();
+      });
+    });
+  }
+
+  // Random disaster trigger
+  function randomDisasterTrigger() {
+    const disasterProbability = 0.45;
+
+    if (Math.random() < disasterProbability) {
+      const disasters = [triggerMeteoriteImpact, triggerThunder, triggerTornado];
+      const randomDisaster = disasters[Math.floor(Math.random() * disasters.length)];
+      randomDisaster();
+    }
+  }
+
+  function randomMetoerTrigger() {
+    const meteorProbability = 0.50;
+
+    if (Math.random() < meteorProbability) {
+      triggerMeteoriteImpact;
+    }
+  }
+  function randomThunderTrigger() {
+    const ThunderProbability = 0.40;
+
+    if (Math.random() < ThunderProbability) {
+      triggerThunder;
+    }
+  }
+  function randomTornadoTrigger() {
+    const TornadoProbability = 0.30;
+
+    if (Math.random() < TornadoProbability) {
+      triggerTornado;
+    }
+  }
+
+  // Set interval to trigger disasters every 10 seconds
+  // Ensure this runs in the game loop without getting paused
+// setInterval(() => {
+//   if (!isPaused) {
+//     randomDisasterTrigger();
+//   }
+// }, 10000); // Trigger disasters every 10 seconds
+
+  return {
+    triggerMeteoriteImpact,
+    triggerThunder,
+    triggerTornado,
+    randomDisasterTrigger,
+    randomMetoerTrigger,
+    randomThunderTrigger,
+    randomTornadoTrigger,
+
+  };
+}
